@@ -2610,6 +2610,17 @@ static void next_start_code_studio(GetBitContext *gb)
         get_bits(gb, 8);
 }
 
+static void extension_and_user_data(GetBitContext *gb, int i)
+{
+    uint32_t startcode;
+
+    startcode = show_bits_long(gb, 32);
+    if (startcode == USER_DATA_STARTCODE || startcode == EXT_STARTCODE) {
+        // FIXME
+        printf("\n FIXME \n");
+    }
+}
+
 /**
  * Decode MPEG-4 headers.
  * @return <0 if no VOP found (or a damaged one)
