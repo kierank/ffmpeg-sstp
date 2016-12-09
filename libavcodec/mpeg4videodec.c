@@ -2602,6 +2602,14 @@ static int decode_vop_header(Mpeg4DecContext *ctx, GetBitContext *gb)
     return 0;
 }
 
+static void next_start_code_studio(GetBitContext *gb)
+{
+    align_get_bits(gb);
+
+    while (show_bits_long(gb, 24) != 0x1)
+        get_bits(gb, 8);
+}
+
 /**
  * Decode MPEG-4 headers.
  * @return <0 if no VOP found (or a damaged one)
