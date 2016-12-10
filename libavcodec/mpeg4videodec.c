@@ -2612,14 +2612,53 @@ static void next_start_code_studio(GetBitContext *gb)
     }
 }
 
-static void extension_and_user_data(GetBitContext *gb, int i)
+static void extension_and_user_data(GetBitContext *gb, int id)
 {
     uint32_t startcode;
+    int i;
 
     startcode = show_bits_long(gb, 32);
     if (startcode == USER_DATA_STARTCODE || startcode == EXT_STARTCODE) {
         // FIXME
-        printf("\n extension or user data stuff \n");
+        printf("\n extension or user data stuff %i \n");
+
+        if (id == 4 && startcode == EXT_STARTCODE) {
+            skip_bits_long(gb, 32);
+            uint8_t type = get_bits(gb, 4);
+            if (type == QUANT_MATRIX_EXT_ID) {
+                if (get_bits1(gb)) {
+                    printf("\n intra quant \n");
+                    /* intra_quantiser_matrix */
+                    for (i = 0; i < 64; i++) {
+                        get_bits(gb, 8);
+                    }
+                }
+
+                if (get_bits1(gb)) {
+                    printf("\n non intra quant \n");
+                    /* non intra_quantiser_matrix */
+                    for (i = 0; i < 64; i++) {
+                        get_bits(gb, 8);
+                    }
+                }
+
+                if (get_bits1(gb)) {
+                    printf("\n chroma intra quant \n");
+                    /* intra_quantiser_matrix */
+                    for (i = 0; i < 64; i++) {
+                        get_bits(gb, 8);
+                    }
+                }
+
+                if (get_bits1(gb)) {
+                    printf("\n chroma non intra quant \n");
+                    /* intra_quantiser_matrix */
+                    for (i = 0; i < 64; i++) {
+                        get_bits(gb, 8);
+                    }
+                }
+            }
+        }
     }
 }
 
