@@ -61,6 +61,7 @@
 #define GOP_STARTCODE        0x1B3
 #define VISUAL_OBJ_STARTCODE 0x1B5
 #define VOP_STARTCODE        0x1B6
+#define SLICE_STARTCODE      0x1B7
 #define EXT_STARTCODE        0x1B8
 
 #define QUANT_MATRIX_EXT_ID  0x3
