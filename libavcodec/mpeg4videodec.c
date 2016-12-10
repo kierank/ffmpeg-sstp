@@ -2657,6 +2657,7 @@ static void extension_and_user_data(GetBitContext *gb, int id)
                         get_bits(gb, 8);
                     }
                 }
+                next_start_code_studio(gb);
             }
         }
     }
@@ -2775,6 +2776,68 @@ int ff_mpeg4_decode_picture_header(Mpeg4DecContext *ctx, GetBitContext *gb)
             mpeg4_decode_gop_header(s, gb);
         } else if (startcode == VOS_STARTCODE) {
             mpeg4_decode_profile_level(s, gb);
+            if (s->avctx->profile == FF_PROFILE_MPEG4_SIMPLE_STUDIO &&
+                (s->avctx->level > 0 && s->avctx->level < 9)) {
+                next_start_code_studio(gb);
+                extension_and_user_data(gb, 0);
+                startcode = get_bits_long(gb, 32);
+                if (startcode == VISUAL_OBJ_STARTCODE) {
+                    if (get_bits1(gb)) {
+                        get_bits(gb, 4); /* visual_object_verid */
+                        get_bits(gb, 3); /* visual_object_priority */
+                    } else {
+                        // Guessing, what's going on here
+                        skip_bits(gb, 7);
+                    }
+
+                    next_start_code_studio(gb);
+                    extension_and_user_data(gb, 1);
+                    get_bits_long(gb, 32); // not sure what this is
+
+                    /* StudioVideoObjectLayer */
+                    startcode = get_bits_long(gb, 32); // FIXME check this
+                    skip_bits1(gb); /* random_accessible_vol */
+                    if (get_bits(gb, 8) == 0xe) {
+                        if (get_bits1(gb)) {
+                            get_bits(gb, 4); /* visual_object_layer_verid */
+                            get_bits(gb, 3); /* visual_object_layer_priority */
+                        }
+                        uint8_t shape = get_bits(gb, 2);
+                        printf("\n shape %x \n", shape);
+                        uint8_t test = get_bits(gb, 4);
+                        uint8_t prog = get_bits1(gb); /* progressive_sequence */
+                        #define RECT 0
+                        #define BIN 1
+                        #define BIN_ONLY 2
+                        #define GREY 3
+
+                        if (shape != BIN_ONLY) {
+                            uint8_t chroma = get_bits(gb, 2);
+                            uint8_t bpp = get_bits(gb, 4);
+                            printf("\n prog %x chroma %x shape %x \n", prog, chroma, shape );
+                            printf("\n bpp %x \n", bpp);
+                        }
+
+                        // FIXME unknown bitstream format, lots of stuff here
+
+                        next_start_code_studio(gb);
+                        extension_and_user_data(gb, 2);
+                        startcode = get_bits_long(gb, 32); // FIXME check this
+                        if (startcode == VOP_STARTCODE) {
+                            get_bits64(gb, 64);
+                            uint16_t temporal_reference = get_bits(gb, 10);
+
+                            next_start_code_studio(gb);
+                            extension_and_user_data(gb, 4);
+
+                            startcode = get_bits_long(gb, 32); // FIXME check this
+                            printf("\n %x \n", startcode);
+
+                            exit(0);
+                        }
+                    }
+                }
+            }
         } else if (startcode == VISUAL_OBJ_STARTCODE) {
             mpeg4_decode_visual_object(s, gb);
         } else if (startcode == VOP_STARTCODE) {
