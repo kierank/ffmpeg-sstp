@@ -2781,56 +2781,33 @@ int ff_mpeg4_decode_picture_header(Mpeg4DecContext *ctx, GetBitContext *gb)
                 next_start_code_studio(gb);
                 extension_and_user_data(gb, 0);
                 startcode = get_bits_long(gb, 32);
+
+                /* StudioVisualObject() */
                 if (startcode == VISUAL_OBJ_STARTCODE) {
-                    if (get_bits1(gb)) {
-                        get_bits(gb, 4); /* visual_object_verid */
-                        get_bits(gb, 3); /* visual_object_priority */
-                    } else {
-                        // Guessing, what's going on here
-                        skip_bits(gb, 7);
-                    }
+                    skip_bits(gb, 4); /* visual_object_verid */
+                    uint8_t vot = get_bits(gb, 4); /* visual_object_type */
 
                     next_start_code_studio(gb);
                     extension_and_user_data(gb, 1);
-                    get_bits_long(gb, 32); // not sure what this is
 
-                    /* StudioVideoObjectLayer */
-                    startcode = get_bits_long(gb, 32); // FIXME check this
-                    skip_bits1(gb); /* random_accessible_vol */
-                    if (get_bits(gb, 8) == 0xe) {
-                        if (get_bits1(gb)) {
-                            get_bits(gb, 4); /* visual_object_layer_verid */
-                            get_bits(gb, 3); /* visual_object_layer_priority */
-                        }
-                        uint8_t shape = get_bits(gb, 2);
-                        printf("\n shape %x \n", shape);
-                        uint8_t test = get_bits(gb, 4);
-                        uint8_t prog = get_bits1(gb); /* progressive_sequence */
-                        #define RECT 0
-                        #define BIN 1
-                        #define BIN_ONLY 2
-                        #define GREY 3
+                    if (vot == VOT_VIDEO_ID) {
+                        /* StudioVideoObjectLayer */
+                        skip_bits_long(gb, 32); /* video_object_start_code */
+                        skip_bits_long(gb, 32); /* video_object_layer_start_code */
+                        skip_bits1(gb); /* random_accessible_vol */
+                        uint8_t voti = get_bits(gb, 8); /* video_object_type_indication */
 
-                        if (shape != BIN_ONLY) {
-                            uint8_t chroma = get_bits(gb, 2);
-                            uint8_t bpp = get_bits(gb, 4);
-                            printf("\n prog %x chroma %x shape %x \n", prog, chroma, shape );
-                            printf("\n bpp %x \n", bpp);
-                        }
+                        if (voti == 0xe) {
 
-                        // FIXME unknown bitstream format, lots of stuff here
 
-                        next_start_code_studio(gb);
-                        extension_and_user_data(gb, 2);
-                        startcode = get_bits_long(gb, 32);
-                        if (startcode == VOP_STARTCODE) {
-                            get_bits64(gb, 64);
-                            uint16_t temporal_reference = get_bits(gb, 10);
-                            printf("\n vop structure %x \n", get_bits(gb, 2));
-                            printf("\n vop coding type %x \n", get_bits(gb, 2));
-                            printf("\n vop coded %x \n", get_bits1(gb));
+                            next_start_code_studio(gb);
+                            extension_and_user_data(gb, 2);
+                            startcode = get_bits_long(gb, 32);
+                            if (startcode == VOP_STARTCODE) {
+                                get_bits64(gb, 64);
+                                uint16_t temporal_reference = get_bits(gb, 10);
 
-                            while(get_bits_left(gb) > 0) {
+
                                 next_start_code_studio(gb);
                                 extension_and_user_data(gb, 4);
 
@@ -2838,10 +2815,9 @@ int ff_mpeg4_decode_picture_header(Mpeg4DecContext *ctx, GetBitContext *gb)
                                 uint16_t mb = get_bits(gb, 13);
                                 uint8_t not_coded = get_bits(gb, 1);
                                 uint8_t comp_mode = get_bits(gb, 1);
-                                printf("\n %x %x %x \n", mb, not_coded, comp_mode);
-                            }
 
-                            exit(0);
+                                exit(0);
+                            }
                         }
                     }
                 }
