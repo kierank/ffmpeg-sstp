@@ -2606,8 +2606,10 @@ static void next_start_code_studio(GetBitContext *gb)
 {
     align_get_bits(gb);
 
-    while (show_bits_long(gb, 24) != 0x1)
+    while (show_bits_long(gb, 24) != 0x1) {
         get_bits(gb, 8);
+        printf("reading byte \n");
+    }
 }
 
 static void extension_and_user_data(GetBitContext *gb, int i)
@@ -2617,7 +2619,7 @@ static void extension_and_user_data(GetBitContext *gb, int i)
     startcode = show_bits_long(gb, 32);
     if (startcode == USER_DATA_STARTCODE || startcode == EXT_STARTCODE) {
         // FIXME
-        printf("\n FIXME \n");
+        printf("\n extension or user data stuff \n");
     }
 }
 
