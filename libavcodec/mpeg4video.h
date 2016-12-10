@@ -63,6 +63,8 @@
 #define VOP_STARTCODE        0x1B6
 #define EXT_STARTCODE        0x1B8
 
+#define QUANT_MATRIX_EXT_ID  0x3
+
 /* smaller packets likely don't contain a real frame */
 #define MAX_NVOP_SIZE 19
 
