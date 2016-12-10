@@ -2608,7 +2608,7 @@ static void next_start_code_studio(GetBitContext *gb)
 
     while (show_bits_long(gb, 24) != 0x1) {
         get_bits(gb, 8);
-        printf("reading byte \n");
+        //printf("reading byte \n");
     }
 }
 
@@ -2822,16 +2822,24 @@ int ff_mpeg4_decode_picture_header(Mpeg4DecContext *ctx, GetBitContext *gb)
 
                         next_start_code_studio(gb);
                         extension_and_user_data(gb, 2);
-                        startcode = get_bits_long(gb, 32); // FIXME check this
+                        startcode = get_bits_long(gb, 32);
                         if (startcode == VOP_STARTCODE) {
                             get_bits64(gb, 64);
                             uint16_t temporal_reference = get_bits(gb, 10);
+                            printf("\n vop structure %x \n", get_bits(gb, 2));
+                            printf("\n vop coding type %x \n", get_bits(gb, 2));
+                            printf("\n vop coded %x \n", get_bits1(gb));
 
-                            next_start_code_studio(gb);
-                            extension_and_user_data(gb, 4);
+                            while(get_bits_left(gb) > 0) {
+                                next_start_code_studio(gb);
+                                extension_and_user_data(gb, 4);
 
-                            startcode = get_bits_long(gb, 32); // FIXME check this
-                            printf("\n %x \n", startcode);
+                                startcode = get_bits_long(gb, 32); // FIXME check this
+                                uint16_t mb = get_bits(gb, 13);
+                                uint8_t not_coded = get_bits(gb, 1);
+                                uint8_t comp_mode = get_bits(gb, 1);
+                                printf("\n %x %x %x \n", mb, not_coded, comp_mode);
+                            }
 
                             exit(0);
                         }
