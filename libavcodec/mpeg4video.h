@@ -118,6 +118,8 @@ typedef struct Mpeg4DecContext {
     int cplx_estimation_trash_b;
 } Mpeg4DecContext;
 
+static const uint8_t mpeg4_block_count[4] = {0, 6, 8, 10};
+
 /* dc encoding for MPEG-4 */
 extern const uint8_t ff_mpeg4_DCtab_lum[13][2];
 extern const uint8_t ff_mpeg4_DCtab_chrom[13][2];
