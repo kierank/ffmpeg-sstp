@@ -2795,26 +2795,65 @@ int ff_mpeg4_decode_picture_header(Mpeg4DecContext *ctx, GetBitContext *gb)
                         skip_bits_long(gb, 32); /* video_object_start_code */
                         skip_bits_long(gb, 32); /* video_object_layer_start_code */
                         skip_bits1(gb); /* random_accessible_vol */
-                        uint8_t voti = get_bits(gb, 8); /* video_object_type_indication */
+                        skip_bits(gb, 8); /* video_object_type_indication */
+                        skip_bits(gb, 4); /* video_object_layer_verid */
+                        ctx->shape = get_bits(gb, 2); /* video_object_layer_shape */
+                        skip_bits(gb, 4); /* video_object_layer_shape_extension */
+                        skip_bits1(gb); /* progressive_sequence */
+                        if (ctx->shape != BIN_ONLY_SHAPE) {
+                            skip_bits1(gb); /* rgb_components */
+                            s->chroma_format = get_bits(gb, 2); /* chroma_format */
+                            ctx->bit_depth = get_bits(gb, 4); /* bit_depth */
+                        }
+                        if (ctx->shape == RECT_SHAPE) {
+                            check_marker(s->avctx, gb, "before video_object_layer_width");
+                            s->width = get_bits(gb, 14); /* video_object_layer_width */
+                            check_marker(s->avctx, gb, "before video_object_layer_height");
+                            s->height = get_bits(gb, 14); /* video_object_layer_height */
+                            check_marker(s->avctx, gb, "after video_object_layer_height");
+                        }
+                        s->aspect_ratio_info = get_bits(gb, 4);
+                        if (s->aspect_ratio_info == FF_ASPECT_EXTENDED) {
+                            s->avctx->sample_aspect_ratio.num = get_bits(gb, 8);  // par_width
+                            s->avctx->sample_aspect_ratio.den = get_bits(gb, 8);  // par_height
+                        } else {
+                            s->avctx->sample_aspect_ratio = ff_h263_pixel_aspect[s->aspect_ratio_info];
+                        }
 
-                        if (voti == 0xe) {
+                        // FIXME, more stuff
+
+                        next_start_code_studio(gb);
+                        extension_and_user_data(gb, 2);
+                        startcode = get_bits_long(gb, 32);
+                        if (startcode == VOP_STARTCODE) {
+                            get_bits64(gb, 64);
+                            skip_bits(gb, 10); /* temporal_reference */
 
 
                             next_start_code_studio(gb);
-                            extension_and_user_data(gb, 2);
-                            startcode = get_bits_long(gb, 32);
-                            if (startcode == VOP_STARTCODE) {
-                                get_bits64(gb, 64);
-                                uint16_t temporal_reference = get_bits(gb, 10);
+                            extension_and_user_data(gb, 4);
 
+                            if (get_bits_long(gb, 32) == SLICE_START_CODE) {
+                                uint16_t mbn = get_bits(gb, 13); // FIXME, this is a VLC
+                                if (ctx->shape != BIN_ONLY_SHAPE) {
+                                    printf("\n quant %x \n", get_bits(gb, 5));
+                                }
 
+                                if (show_bits1(gb)) {
+                                    skip_bits1(gb);   /* slice_extension_flag */
+                                    skip_bits1(gb);   /* intra_slice */
+                                    skip_bits1(gb);   /* slice_VOP_id_enable */
+                                    skip_bits(gb, 6); /* slice_VOP_id */
+                                    while (show_bits1(gb)) {
+                                        skip_bits1(gb);   /* extra_bit_slice */
+                                        skip_bits(gb, 8); /* slice_VOP_id */
+                                    }
+                                }
+                                skip_bits1(gb); /* extra_bit_slice */
+                                do {
+
+                                } while (show_bits(gb, 23) != 0);
                                 next_start_code_studio(gb);
-                                extension_and_user_data(gb, 4);
-
-                                startcode = get_bits_long(gb, 32); // FIXME check this
-                                uint16_t mb = get_bits(gb, 13);
-                                uint8_t not_coded = get_bits(gb, 1);
-                                uint8_t comp_mode = get_bits(gb, 1);
 
                                 exit(0);
                             }

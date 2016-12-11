@@ -78,6 +78,7 @@ typedef struct Mpeg4DecContext {
     /// number of bits to represent the fractional part of time
     int time_increment_bits;
     int shape;
+    int bit_depth;
     int vol_sprite_usage;
     int sprite_brightness_change;
     int num_sprite_warping_points;
