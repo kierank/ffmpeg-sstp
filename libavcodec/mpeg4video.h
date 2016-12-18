@@ -78,7 +78,6 @@ typedef struct Mpeg4DecContext {
     /// number of bits to represent the fractional part of time
     int time_increment_bits;
     int shape;
-    int bit_depth;
     int vol_sprite_usage;
     int sprite_brightness_change;
     int num_sprite_warping_points;
@@ -165,6 +164,7 @@ void ff_clean_mpeg4_qscales(MpegEncContext *s);
 int ff_mpeg4_decode_partitions(Mpeg4DecContext *ctx);
 int ff_mpeg4_get_video_packet_prefix_length(MpegEncContext *s);
 int ff_mpeg4_decode_video_packet_header(Mpeg4DecContext *ctx);
+int ff_mpeg4_decode_studio_vop_header(Mpeg4DecContext *ctx, GetBitContext *gb);
 void ff_mpeg4_init_direct_mv(MpegEncContext *s);
 void ff_mpeg4videodec_static_init(void);
 int ff_mpeg4_workaround_bugs(AVCodecContext *avctx);
