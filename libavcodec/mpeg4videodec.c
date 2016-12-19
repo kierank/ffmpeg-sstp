@@ -529,6 +529,60 @@ int ff_mpeg4_decode_video_packet_header(Mpeg4DecContext *ctx)
 }
 
 /**
+ * Decode the next video packet.
+ * @return <0 if something went wrong
+ */
+int ff_mpeg4_decode_studio_slice_header(Mpeg4DecContext *ctx)
+{
+    MpegEncContext *s = &ctx->m;
+    int i;
+    GetBitContext *gb = &s->gb;
+
+    if (get_bits_long(gb, 32) == SLICE_START_CODE) {
+        uint8_t quantiser_scale_code = 0;
+
+        uint16_t mbn = get_bits(gb, 13); // FIXME, this is a VLC
+        if (ctx->shape != BIN_ONLY_SHAPE) {
+            quantiser_scale_code = get_bits(gb, 5);
+        }
+
+        if (show_bits1(gb)) {
+            skip_bits1(gb);   /* slice_extension_flag */
+            skip_bits1(gb);   /* intra_slice */
+            skip_bits1(gb);   /* slice_VOP_id_enable */
+            skip_bits(gb, 6); /* slice_VOP_id */
+            while (show_bits1(gb)) {
+                skip_bits1(gb);   /* extra_bit_slice */
+                skip_bits(gb, 8); /* slice_VOP_id */
+            }
+        }
+        skip_bits1(gb); /* extra_bit_slice */
+        do {
+            /* Assumes I-VOP */
+
+            if (get_bits1(gb)) {
+                /* DCT */
+                if (!get_bits1(gb)) {
+                    skip_bits1(gb);
+                    quantiser_scale_code = get_bits(gb, 5);
+                }
+
+                for (i = 0; i < mpeg4_block_count[s->chroma_format]; i++) {
+                    printf("\n %i \n", i );
+                }
+            } else {
+                /* DPCM */
+            }
+
+            exit(0);
+
+        } while (show_bits(gb, 23) != 0);
+    }
+
+    return 0;
+}
+
+/**
  * Get the average motion vector for a GMC MB.
  * @param n either 0 for the x component or 1 for y
  * @return the average MV for a GMC MB
@@ -2663,63 +2717,62 @@ static void extension_and_user_data(GetBitContext *gb, int id)
     }
 }
 
+static int decode_smpte_tc(Mpeg4DecContext *ctx, GetBitContext *gb)
+{
+    MpegEncContext *s = &ctx->m;
+
+    skip_bits(gb, 16); /* Time_code[63..48] */
+    check_marker(s->avctx, gb, "after Time_code[63..48]");
+    skip_bits(gb, 16); /* Time_code[47..32] */
+    check_marker(s->avctx, gb, "after Time_code[47..32]");
+    skip_bits(gb, 16); /* Time_code[31..16] */
+    check_marker(s->avctx, gb, "after Time_code[31..16]");
+    skip_bits(gb, 16); /* Time_code[15..0] */
+    check_marker(s->avctx, gb, "after Time_code[15..0]");
+    skip_bits(gb, 4); /* reserved_bits */
+
+    return 0;
+}
+
 /**
  * Decode the next studio vop header.
  * @return <0 if something went wrong
  */
-int ff_mpeg4_decode_studio_vop_header(Mpeg4DecContext *ctx, GetBitContext *gb)
+static int decode_studio_vop_header(Mpeg4DecContext *ctx, GetBitContext *gb)
 {
     MpegEncContext *s = &ctx->m;
-    int i;
+    uint8_t vop_coding_type, intra_predictors_reset;
 
-    get_bits64(gb, 64);
+    if (get_bits_long(gb, 32) != VOP_STARTCODE) {
+        return -1;
+    }
+
+    if (decode_smpte_tc(ctx, gb) < 0)
+        return -1;
+
     skip_bits(gb, 10); /* temporal_reference */
+    skip_bits(gb, 2); /* vop_structure */
+    vop_coding_type = get_bits(gb, 2); /* vop_coding_type */
+    if (get_bits1(gb)) { /* vop_coded */
+        skip_bits1(gb); /* top_field_first */
+        skip_bits1(gb); /* repeat_first_field */
+        skip_bits1(gb); /* progressive_frame FIXME */
+    }
 
-    // FIXME a lot more stuff here
+    if (vop_coding_type == 0) {
+        intra_predictors_reset = get_bits1(gb); // FIXME
+    }
+
+    if (ctx->shape != BIN_ONLY_SHAPE) {
+        s->alternate_scan = get_bits1(gb);
+        s->frame_pred_frame_dct = get_bits1(gb);
+        s->dct_precision = get_bits(gb, 2);
+        s->intra_dc_precision = get_bits(gb, 2);
+        s->q_scale_type = get_bits1(gb);
+    }
 
     next_start_code_studio(gb);
     extension_and_user_data(gb, 4);
-
-    if (get_bits_long(gb, 32) == SLICE_START_CODE) {
-        uint8_t quantiser_scale_code = 0;
-
-        uint16_t mbn = get_bits(gb, 13); // FIXME, this is a VLC
-        if (ctx->shape != BIN_ONLY_SHAPE) {
-            quantiser_scale_code = get_bits(gb, 5);
-        }
-
-        if (show_bits1(gb)) {
-            skip_bits1(gb);   /* slice_extension_flag */
-            skip_bits1(gb);   /* intra_slice */
-            skip_bits1(gb);   /* slice_VOP_id_enable */
-            skip_bits(gb, 6); /* slice_VOP_id */
-            while (show_bits1(gb)) {
-                skip_bits1(gb);   /* extra_bit_slice */
-                skip_bits(gb, 8); /* slice_VOP_id */
-            }
-        }
-        skip_bits1(gb); /* extra_bit_slice */
-        do {
-            /* Assumes I-VOP */
-
-            if (get_bits1(gb)) {
-                /* DCT */
-                if (!get_bits1(gb)) {
-                    skip_bits1(gb);
-                    quantiser_scale_code = get_bits(gb, 5);
-                }
-
-                for (i = 0; i < mpeg4_block_count[s->chroma_format]; i++) {
-                    printf("\n %i \n", i );
-                }
-            } else {
-                /* DPCM */
-            }
-
-            exit(0);
-
-        } while (show_bits(gb, 23) != 0);
-    }
 
     return 0;
 }
@@ -2788,7 +2841,7 @@ static void decode_studiovisualobject(Mpeg4DecContext *ctx, GetBitContext *gb)
             extension_and_user_data(gb, 2);
             startcode = show_bits_long(gb, 32);
             if (startcode == VOP_STARTCODE) {
-                ff_mpeg4_decode_studio_vop_header(ctx, gb);
+                decode_studio_vop_header(ctx, gb);
 
                 next_start_code_studio(gb);
             }
