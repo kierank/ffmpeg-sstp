@@ -2751,9 +2751,11 @@ static int decode_studio_vop_header(Mpeg4DecContext *ctx, GetBitContext *gb)
     MpegEncContext *s = &ctx->m;
     uint8_t vop_coding_type, intra_predictors_reset;
 
-    if (get_bits_long(gb, 32) != VOP_STARTCODE) {
+    if (get_bits_left(gb) <= 32)
+        return 0;
+
+    if (get_bits_long(gb, 32) != VOP_STARTCODE)
         return -1;
-    }
 
     if (decode_smpte_tc(ctx, gb) < 0)
         return -1;
