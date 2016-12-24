@@ -2666,6 +2666,45 @@ static void next_start_code_studio(GetBitContext *gb)
     }
 }
 
+static void read_quant_matrix(GetBitContext *gb)
+{
+    int i;
+
+    if (get_bits1(gb)) {
+        printf("\n intra quant \n");
+        /* intra_quantiser_matrix */
+        for (i = 0; i < 64; i++) {
+            get_bits(gb, 8);
+        }
+    }
+
+    if (get_bits1(gb)) {
+        printf("\n non intra quant \n");
+        /* non_intra_quantiser_matrix */
+        for (i = 0; i < 64; i++) {
+            get_bits(gb, 8);
+        }
+    }
+
+    if (get_bits1(gb)) {
+        printf("\n chroma intra quant \n");
+        /* chroma_intra_quantiser_matrix */
+        for (i = 0; i < 64; i++) {
+            get_bits(gb, 8);
+        }
+    }
+
+    if (get_bits1(gb)) {
+        printf("\n chroma non intra quant \n");
+        /* chroma_non_intra_quantiser_matrix */
+        for (i = 0; i < 64; i++) {
+            get_bits(gb, 8);
+        }
+    }
+
+    next_start_code_studio(gb);
+}
+
 static void extension_and_user_data(GetBitContext *gb, int id)
 {
     uint32_t startcode;
@@ -2680,38 +2719,7 @@ static void extension_and_user_data(GetBitContext *gb, int id)
             skip_bits_long(gb, 32);
             uint8_t type = get_bits(gb, 4);
             if (type == QUANT_MATRIX_EXT_ID) {
-                if (get_bits1(gb)) {
-                    printf("\n intra quant \n");
-                    /* intra_quantiser_matrix */
-                    for (i = 0; i < 64; i++) {
-                        get_bits(gb, 8);
-                    }
-                }
-
-                if (get_bits1(gb)) {
-                    printf("\n non intra quant \n");
-                    /* non_intra_quantiser_matrix */
-                    for (i = 0; i < 64; i++) {
-                        get_bits(gb, 8);
-                    }
-                }
-
-                if (get_bits1(gb)) {
-                    printf("\n chroma intra quant \n");
-                    /* chroma_intra_quantiser_matrix */
-                    for (i = 0; i < 64; i++) {
-                        get_bits(gb, 8);
-                    }
-                }
-
-                if (get_bits1(gb)) {
-                    printf("\n chroma non intra quant \n");
-                    /* chroma_non_intra_quantiser_matrix */
-                    for (i = 0; i < 64; i++) {
-                        get_bits(gb, 8);
-                    }
-                }
-                next_start_code_studio(gb);
+                read_quant_matrix(gb);
             }
         }
     }
