@@ -2974,7 +2974,7 @@ int ff_mpeg4_decode_picture_header(Mpeg4DecContext *ctx, GetBitContext *gb)
                 extension_and_user_data(gb, 0);
 
                 decode_studiovisualobject(ctx, gb);
-
+                break;
             }
         } else if (startcode == VISUAL_OBJ_STARTCODE) {
             mpeg4_decode_visual_object(s, gb);
