@@ -2849,12 +2849,6 @@ static void decode_studiovisualobject(Mpeg4DecContext *ctx, GetBitContext *gb)
 
             next_start_code_studio(gb);
             extension_and_user_data(gb, 2);
-            startcode = show_bits_long(gb, 32);
-            if (startcode == VOP_STARTCODE) {
-                decode_studio_vop_header(ctx, gb);
-
-                next_start_code_studio(gb);
-            }
         }
     }
 
