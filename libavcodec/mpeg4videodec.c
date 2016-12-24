@@ -2844,7 +2844,7 @@ static void decode_studiovisualobject(Mpeg4DecContext *ctx, GetBitContext *gb)
             check_marker(s->avctx, gb, "after first_half_vbv_buffer_size");
             skip_bits(gb, 15); /* latter_half_vbv_occupancy */
             check_marker(s->avctx, gb, "after latter_half_vbv_occupancy");
-            skip_bits1(gb); /* low_delay */
+            s->low_delay = get_bits1(gb);
             s->mpeg_quant = get_bits1(gb); /* mpeg2_stream */
 
             next_start_code_studio(gb);
