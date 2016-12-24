@@ -2991,7 +2991,10 @@ end:
         s->low_delay = 1;
     s->avctx->has_b_frames = !s->low_delay;
 
-    return decode_vop_header(ctx, gb);
+    if (s->studio_profile)
+        return decode_studio_vop_header(ctx, gb);
+    else
+        return decode_vop_header(ctx, gb);
 }
 
 av_cold void ff_mpeg4videodec_static_init(void) {
