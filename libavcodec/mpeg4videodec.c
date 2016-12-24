@@ -557,26 +557,6 @@ int ff_mpeg4_decode_studio_slice_header(Mpeg4DecContext *ctx)
             }
         }
         skip_bits1(gb); /* extra_bit_slice */
-        do {
-            /* Assumes I-VOP */
-
-            if (get_bits1(gb)) {
-                /* DCT */
-                if (!get_bits1(gb)) {
-                    skip_bits1(gb);
-                    quantiser_scale_code = get_bits(gb, 5);
-                }
-
-                for (i = 0; i < mpeg4_block_count[s->chroma_format]; i++) {
-                    printf("\n %i \n", i );
-                }
-            } else {
-                /* DPCM */
-            }
-
-            exit(0);
-
-        } while (show_bits(gb, 23) != 0);
     }
 
     return 0;
@@ -1772,6 +1752,35 @@ end:
     return SLICE_OK;
 }
 
+static int mpeg4_decode_studio_mb(MpegEncContext *s, int16_t block[12][64])
+{
+    int i;
+    uint8_t quantiser_scale_code;
+
+    printf("\n decodemb \n");
+
+    /* StudioMacroblock */
+    do {
+        /* Assumes I-VOP */
+
+        if (get_bits1(&s->gb)) {
+            /* DCT */
+            if (!get_bits1(&s->gb)) {
+                skip_bits1(&s->gb);
+                quantiser_scale_code = get_bits(&s->gb, 5);
+            }
+
+            for (i = 0; i < mpeg4_block_count[s->chroma_format]; i++) {
+                printf("\n %i \n", i );
+            }
+        } else {
+            /* DPCM */
+        }
+    } while (show_bits(&s->gb, 23) != 0);
+
+    return 0;
+}
+
 static int mpeg4_decode_gop_header(MpegEncContext *s, GetBitContext *gb)
 {
     int hours, minutes, seconds;
@@ -2756,6 +2765,8 @@ static int decode_studio_vop_header(Mpeg4DecContext *ctx, GetBitContext *gb)
 
     if (get_bits_long(gb, 32) != VOP_STARTCODE)
         return -1;
+
+    s->decode_mb = mpeg4_decode_studio_mb;
 
     if (decode_smpte_tc(ctx, gb) < 0)
         return -1;
