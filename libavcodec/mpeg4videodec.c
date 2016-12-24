@@ -2715,7 +2715,7 @@ static void extension_and_user_data(GetBitContext *gb, int id)
         // FIXME
         printf("\n extension or user data stuff \n");
 
-        if (id == 4 && startcode == EXT_STARTCODE) {
+        if ((id == 2 || id == 4) && startcode == EXT_STARTCODE) {
             skip_bits_long(gb, 32);
             uint8_t type = get_bits(gb, 4);
             if (type == QUANT_MATRIX_EXT_ID) {
