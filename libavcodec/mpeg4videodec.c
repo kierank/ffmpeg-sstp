@@ -2773,14 +2773,14 @@ static int decode_studio_vop_header(Mpeg4DecContext *ctx, GetBitContext *gb)
 
     skip_bits(gb, 10); /* temporal_reference */
     skip_bits(gb, 2); /* vop_structure */
-    vop_coding_type = get_bits(gb, 2); /* vop_coding_type */
+    s->pict_type = get_bits(gb, 2) + AV_PICTURE_TYPE_I; /* vop_coding_type */
     if (get_bits1(gb)) { /* vop_coded */
         skip_bits1(gb); /* top_field_first */
         skip_bits1(gb); /* repeat_first_field */
         skip_bits1(gb); /* progressive_frame FIXME */
     }
 
-    if (vop_coding_type == 0) {
+    if (s->pict_type == AV_PICTURE_TYPE_I) {
         intra_predictors_reset = get_bits1(gb); // FIXME
     }
 
