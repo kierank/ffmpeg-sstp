@@ -117,6 +117,8 @@ typedef struct Mpeg4DecContext {
     int cplx_estimation_trash_b;
 
     VLC studio_intra_tab[12];
+    VLC studio_luma_dc;
+    VLC studio_chroma_dc;
 } Mpeg4DecContext;
 
 static const uint8_t mpeg4_block_count[4] = {0, 6, 8, 10};
@@ -148,6 +150,8 @@ extern const uint16_t ff_mpeg4_resync_prefix[8];
 
 extern const uint8_t ff_mpeg4_dc_threshold[8];
 
+extern const uint16_t ff_mpeg4_studio_dc_luma[19][2];
+extern const uint16_t ff_mpeg4_studio_dc_chroma[19][2];
 extern const uint16_t ff_mpeg4_studio_intra[12][22][2];
 
 void ff_mpeg4_encode_mb(MpegEncContext *s,

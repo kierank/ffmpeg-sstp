@@ -373,6 +373,23 @@ const uint8_t ff_mpeg4_dc_threshold[8]={
     99, 13, 15, 17, 19, 21, 23, 0
 };
 
+/* Note these are different in studio mode */
+const uint16_t ff_mpeg4_studio_dc_luma[19][2]={
+    {0x0e,  6}, {0x06,  5}, {0x00,  4}, {0x02,  4},
+    {0x07,  3}, {0x05,  3}, {0x03,  3}, {0x02,  3},
+    {0x04,  3}, {0x06,  3}, {0x01,  4}, {0x1e,  7},
+    {0x3e,  8}, {0x7e,  9}, {0xfe, 10}, {0x1fe, 11},
+    {0x3fe, 12}, {0x7fe, 13}, {0x7ff, 13}
+};
+
+const uint16_t ff_mpeg4_studio_dc_chroma[19][2]={
+    {0x00,  4}, {0x02,  4}, {0x07,  3}, {0x05,  3},
+    {0x03,  3}, {0x02,  3}, {0x04,  3}, {0x06,  3},
+    {0x01,  4}, {0x06,  5}, {0x0e,  6}, {0x1e,  7},
+    {0x3e,  8}, {0x7e,  9}, {0xfe, 10}, {0x1fe, 11},
+    {0x3fe, 12}, {0x7fe, 13}, {0x7ff, 13}
+};
+
 const uint16_t ff_mpeg4_studio_intra[12][22][2]={
     {
         {0x05,  4}, {0x04,  4}, {0x05,  7}, {0x09,  9},
