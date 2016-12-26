@@ -1758,14 +1758,41 @@ end:
     return SLICE_OK;
 }
 
+
+/* additional_code, vlc index */
+static int ac_state_tab[22][2] =
+{
+    {0, 0},
+    {0, 1},
+    {1, 1},
+    {2, 1},
+    {3, 1},
+    {4, 1},
+    {5, 1},
+    {1, 2},
+    {2, 2},
+    {3, 2},
+    {4, 2},
+    {5, 2},
+    {1, 3},
+    {2, 4},
+    {3, 5},
+    {4, 6},
+    {5, 7},
+    {6, 8},
+    {7, 9},
+    {8, 10},
+    {0, 0}
+};
+
 static int mpeg4_decode_studio_block(MpegEncContext *s, int n)
 {
     Mpeg4DecContext *ctx = (Mpeg4DecContext *)s;
 
-    int level, code;
+    int level, code, i;
     VLC *cur_vlc = &ctx->studio_intra_tab[0];
-
-    printf("\n %i \n", get_bits_count(&s->gb));
+    int16_t coeffs[64];
+    int idx = 1;
 
     if (n < 4)
         code = get_vlc2(&s->gb, ctx->studio_luma_dc.table, STUDIO_INTRA_BITS, 2);
@@ -1786,20 +1813,54 @@ static int mpeg4_decode_studio_block(MpegEncContext *s, int n)
         }
     }
 
+    // FIXME add the sign logic, might be the same, dunno
     printf("\n dc level %i \n", level);
 
     /* AC Coefficients */
-    // read vlc
-    //
 
-    int group = 0;
-    /* Escape */
-    if (group == 0) {
-        return 0;
+    int group = 0, run = 0;
+    int additional_code_len, sign;
+
+    while (1) {
+        group = get_vlc2(&s->gb, cur_vlc->table, STUDIO_INTRA_BITS, 2);
+        printf("\n ac group %i idx %i \n", group, idx);
+
+        additional_code_len = ac_state_tab[group][0];
+        cur_vlc = &ctx->studio_intra_tab[ac_state_tab[group][1]];
+
+        /* End of Block */
+        if (group == 0) {
+            printf("\n END OF BLOCK coeffs %i\n", idx);
+            break;
+        }
+        else if (group >= 1 && group <= 6) {
+            /* Zero run length (Table B.47) */
+            run = 1 << additional_code_len;
+            if (additional_code_len)
+                run += get_bits(&s->gb, additional_code_len);
+            for (i = 0; i < run; i++)
+                coeffs[idx++] = 0;
+        }
+        else if (group >= 7 && group <= 12) {
+            code = get_bits(&s->gb, additional_code_len);
+            sign = code & 1;
+            code >>= 1;
+            run = (1 << (additional_code_len - 1)) + code;
+            for (i = 0; i < run; i++)
+                coeffs[idx++] = 0;
+            coeffs[idx++] = sign ? 1 : -1;
+        }
+        else if (group >= 13 && group <= 20) {
+            /* Level value */
+            coeffs[idx++] = get_xbits(&s->gb, additional_code_len);
+        }
+        /* Escape */
+        else if (group == 21) {
+            printf("\n ESCAPE \n");
+            break;
+        }
     }
-    else if (group >= 1 && group <= 6) {
-        cur_vlc = &ctx->studio_intra_tab[1];
-    }
+
 
 
     return 0;
