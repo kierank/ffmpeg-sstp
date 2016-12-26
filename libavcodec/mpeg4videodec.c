@@ -44,6 +44,7 @@
 #define SPRITE_TRAJ_VLC_BITS 6
 #define DC_VLC_BITS 9
 #define MB_TYPE_B_VLC_BITS 4
+#define STUDIO_INTRA_BITS 9
 
 static VLC dc_lum, dc_chrom;
 static VLC sprite_trajectory;
@@ -3118,6 +3119,20 @@ static av_cold int init_studio_vlcs(Mpeg4DecContext *ctx)
         if (ret < 0)
             return ret;
     }
+
+    ret = init_vlc(&ctx->studio_luma_dc, STUDIO_INTRA_BITS, 19,
+                   &ff_mpeg4_studio_dc_luma[0][1], 4, 2,
+                   &ff_mpeg4_studio_dc_luma[0][0], 4, 2,
+                   0);
+    if (ret < 0)
+        return ret;
+
+    ret = init_vlc(&ctx->studio_chroma_dc, STUDIO_INTRA_BITS, 19,
+                   &ff_mpeg4_studio_dc_chroma[0][1], 4, 2,
+                   &ff_mpeg4_studio_dc_chroma[0][0], 4, 2,
+                   0);
+    if (ret < 0)
+        return ret;
 
     return 0;
 }
