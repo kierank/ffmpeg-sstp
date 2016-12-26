@@ -1774,6 +1774,7 @@ static int ac_state_tab[22][2] =
     {3, 2},
     {4, 2},
     {5, 2},
+    {6, 2},
     {1, 3},
     {2, 4},
     {3, 5},
@@ -1823,10 +1824,11 @@ static int mpeg4_decode_studio_block(MpegEncContext *s, int n)
 
     while (1) {
         group = get_vlc2(&s->gb, cur_vlc->table, STUDIO_INTRA_BITS, 2);
-        printf("\n ac group %i idx %i \n", group, idx);
 
         additional_code_len = ac_state_tab[group][0];
         cur_vlc = &ctx->studio_intra_tab[ac_state_tab[group][1]];
+
+        printf("\n ac group %i idx %i code_len %i \n", group, idx, additional_code_len);
 
         /* End of Block */
         if (group == 0) {
@@ -1842,6 +1844,7 @@ static int mpeg4_decode_studio_block(MpegEncContext *s, int n)
                 coeffs[idx++] = 0;
         }
         else if (group >= 7 && group <= 12) {
+            /* Zero run length and +/-1 level (Table B.48) */
             code = get_bits(&s->gb, additional_code_len);
             sign = code & 1;
             code >>= 1;
@@ -1851,7 +1854,7 @@ static int mpeg4_decode_studio_block(MpegEncContext *s, int n)
             coeffs[idx++] = sign ? 1 : -1;
         }
         else if (group >= 13 && group <= 20) {
-            /* Level value */
+            /* Level value (Table B.49) */
             coeffs[idx++] = get_xbits(&s->gb, additional_code_len);
         }
         /* Escape */
