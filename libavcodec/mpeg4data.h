@@ -373,7 +373,7 @@ const uint8_t ff_mpeg4_dc_threshold[8]={
     99, 13, 15, 17, 19, 21, 23, 0
 };
 
-static const uint16_t studio_intra[12][22][2]={
+const uint16_t ff_mpeg4_studio_intra[12][22][2]={
     {
         {0x05,  4}, {0x04,  4}, {0x05,  7}, {0x09,  9},
         {0x21, 11}, {0x41, 12}, {0x81, 13}, {0x03,  4},
