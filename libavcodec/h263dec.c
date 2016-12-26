@@ -197,6 +197,10 @@ static int decode_slice(MpegEncContext *s)
 
     ff_set_qscale(s, s->qscale);
 
+    if (s->studio_profile) {
+        ff_mpeg4_decode_studio_slice_header(s->avctx->priv_data);
+    }
+
     if (s->avctx->hwaccel) {
         const uint8_t *start = s->gb.buffer + get_bits_count(&s->gb) / 8;
         ret = s->avctx->hwaccel->decode_slice(s->avctx, start, s->gb.buffer_end - start);
