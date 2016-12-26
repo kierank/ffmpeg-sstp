@@ -1758,33 +1758,83 @@ end:
     return SLICE_OK;
 }
 
+static int mpeg4_decode_studio_block(MpegEncContext *s, int n)
+{
+    Mpeg4DecContext *ctx = (Mpeg4DecContext *)s;
+
+    int level, code;
+    VLC *cur_vlc = &ctx->studio_intra_tab[0];
+
+    printf("\n %i \n", get_bits_count(&s->gb));
+
+    if (n < 4)
+        code = get_vlc2(&s->gb, ctx->studio_luma_dc.table, STUDIO_INTRA_BITS, 2);
+    else
+        code = get_vlc2(&s->gb, ctx->studio_chroma_dc.table, STUDIO_INTRA_BITS, 2);
+
+    printf("\n dc code %i \n", code);
+
+    if (code == 0) {
+        level = 0;
+    } else {
+        level = get_xbits(&s->gb, code);
+
+        if (code > 8) {
+            if (get_bits1(&s->gb) == 0) { /* marker */
+                printf("\n no marker \n");
+            }
+        }
+    }
+
+    printf("\n dc level %i \n", level);
+
+    /* AC Coefficients */
+    // read vlc
+    //
+
+    int group = 0;
+    /* Escape */
+    if (group == 0) {
+        return 0;
+    }
+    else if (group >= 1 && group <= 6) {
+        cur_vlc = &ctx->studio_intra_tab[1];
+    }
+
+
+    return 0;
+}
+
 static int mpeg4_decode_studio_mb(MpegEncContext *s, int16_t block[12][64])
 {
     int i;
-    uint8_t quantiser_scale_code;
+    uint8_t quantiser_scale_code = s->qscale;
 
-    printf("\n decodemb \n");
+    printf ("__PRETTY_FUNCTION__ = %s\n", __PRETTY_FUNCTION__);
 
     /* StudioMacroblock */
-    do {
-        /* Assumes I-VOP */
-
-        if (get_bits1(&s->gb)) {
-            /* DCT */
-            if (!get_bits1(&s->gb)) {
-                skip_bits1(&s->gb);
-                quantiser_scale_code = get_bits(&s->gb, 5);
-            }
-
-            for (i = 0; i < mpeg4_block_count[s->chroma_format]; i++) {
-                printf("\n %i \n", i );
-            }
-        } else {
-            /* DPCM */
+    /* Assumes I-VOP */
+    if (get_bits1(&s->gb)) { /* compression_mode */
+        /* DCT */
+        /* macroblock_type, 1 or 2-bit VLC */
+        if (!get_bits1(&s->gb)) {
+            skip_bits1(&s->gb);
+            quantiser_scale_code = get_bits(&s->gb, 5);
         }
-    } while (show_bits(&s->gb, 23) != 0);
+        printf("\n quant %x \n", quantiser_scale_code);
 
-    return 0;
+        for (i = 0; i < mpeg4_block_count[s->chroma_format]; i++) {
+            mpeg4_decode_studio_block(s, i);
+        }
+    } else {
+        /* DPCM */
+        printf("\n dpcm \n");
+    }
+
+    if (show_bits(&s->gb, 23) == 0)
+        return SLICE_END;
+
+    return SLICE_OK;
 }
 
 static int mpeg4_decode_gop_header(MpegEncContext *s, GetBitContext *gb)
