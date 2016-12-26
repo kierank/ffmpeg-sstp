@@ -115,6 +115,8 @@ typedef struct Mpeg4DecContext {
     int cplx_estimation_trash_i;
     int cplx_estimation_trash_p;
     int cplx_estimation_trash_b;
+
+    VLC studio_intra_tab[12];
 } Mpeg4DecContext;
 
 static const uint8_t mpeg4_block_count[4] = {0, 6, 8, 10};

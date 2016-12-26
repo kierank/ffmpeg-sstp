@@ -3105,6 +3105,23 @@ static int mpeg4_update_thread_context(AVCodecContext *dst,
 }
 #endif
 
+static av_cold int init_studio_vlcs(Mpeg4DecContext *ctx)
+{
+    int i, ret;
+
+    for (i = 0; i < 12; i++) {
+        ret = init_vlc(&ctx->studio_intra_tab[i], STUDIO_INTRA_BITS, 22,
+                       &ff_mpeg4_studio_intra[i][0][1], 4, 2,
+                       &ff_mpeg4_studio_intra[i][0][0], 4, 2,
+                       0);
+
+        if (ret < 0)
+            return ret;
+    }
+
+    return 0;
+}
+
 static av_cold int decode_init(AVCodecContext *avctx)
 {
     Mpeg4DecContext *ctx = avctx->priv_data;
@@ -3120,6 +3137,8 @@ static av_cold int decode_init(AVCodecContext *avctx)
         return ret;
 
     ff_mpeg4videodec_static_init();
+    if ((ret = init_studio_vlcs(ctx)) < 0)
+        return ret;
 
     s->h263_pred = 1;
     s->low_delay = 0; /* default, might be overridden in the vol header during header parsing */
