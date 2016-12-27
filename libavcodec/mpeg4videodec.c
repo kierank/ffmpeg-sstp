@@ -2795,15 +2795,18 @@ static void next_start_code_studio(GetBitContext *gb)
     }
 }
 
-static void read_quant_matrix(GetBitContext *gb)
+static void read_quant_matrix_ext(MpegEncContext *s, GetBitContext *gb)
 {
-    int i;
+    int i, j, v;
 
     if (get_bits1(gb)) {
         printf("\n intra quant \n");
         /* intra_quantiser_matrix */
         for (i = 0; i < 64; i++) {
-            get_bits(gb, 8);
+            v = get_bits(gb, 8);
+            j = s->idsp.idct_permutation[ff_zigzag_direct[i]];
+            s->intra_matrix[j]        = v;
+            s->chroma_intra_matrix[j] = v;
         }
     }
 
@@ -2819,7 +2822,9 @@ static void read_quant_matrix(GetBitContext *gb)
         printf("\n chroma intra quant \n");
         /* chroma_intra_quantiser_matrix */
         for (i = 0; i < 64; i++) {
-            get_bits(gb, 8);
+            v = get_bits(gb, 8);
+            j = s->idsp.idct_permutation[ff_zigzag_direct[i]];
+            s->chroma_intra_matrix[j] = v;
         }
     }
 
@@ -2841,14 +2846,13 @@ static void extension_and_user_data(MpegEncContext *s, GetBitContext *gb, int id
 
     startcode = show_bits_long(gb, 32);
     if (startcode == USER_DATA_STARTCODE || startcode == EXT_STARTCODE) {
-        // FIXME
-        printf("\n extension or user data stuff \n");
+        printf("\n extension or user data stuff id %i \n", id);
 
         if ((id == 2 || id == 4) && startcode == EXT_STARTCODE) {
             skip_bits_long(gb, 32);
             uint8_t type = get_bits(gb, 4);
             if (type == QUANT_MATRIX_EXT_ID) {
-                read_quant_matrix(gb);
+                read_quant_matrix_ext(s, gb);
             }
         }
     }
@@ -2922,6 +2926,18 @@ static int decode_studio_vop_header(Mpeg4DecContext *ctx, GetBitContext *gb)
         ff_init_scantable(s->idsp.idct_permutation, &s->intra_scantable,   ff_zigzag_direct);
         ff_init_scantable(s->idsp.idct_permutation, &s->intra_h_scantable, ff_alternate_horizontal_scan);
         ff_init_scantable(s->idsp.idct_permutation, &s->intra_v_scantable, ff_alternate_vertical_scan);
+    }
+
+    /* load default matrixes */
+    for (i = 0; i < 64; i++) {
+        int j = s->idsp.idct_permutation[i];
+        v = ff_mpeg4_default_intra_matrix[i];
+        s->intra_matrix[j]        = v;
+        s->chroma_intra_matrix[j] = v;
+
+        v = ff_mpeg4_default_non_intra_matrix[i];
+        s->inter_matrix[j]        = v;
+        s->chroma_inter_matrix[j] = v;
     }
 
     next_start_code_studio(gb);
