@@ -1815,6 +1815,7 @@ static int mpeg4_decode_studio_block(MpegEncContext *s, int n)
     int cc, dct_dc_size, dct_diff, code, i, j;
     VLC *cur_vlc = &ctx->studio_intra_tab[0];
     uint8_t *const scantable = s->intra_scantable.permutated;
+    const uint16_t *quant_matrix;
     int32_t block[64];
     int idx = 1;
     uint16_t flc;
@@ -1827,13 +1828,13 @@ static int mpeg4_decode_studio_block(MpegEncContext *s, int n)
     if (n < 4) {
         cc = 0;
         dct_dc_size = get_vlc2(&s->gb, ctx->studio_luma_dc.table, STUDIO_INTRA_BITS, 2);
+        quant_matrix = s->intra_matrix;
     }
     else {
         cc = ((n - 4) % 2) + 1; /* Table 7-30 */
         dct_dc_size = get_vlc2(&s->gb, ctx->studio_chroma_dc.table, STUDIO_INTRA_BITS, 2);
+        quant_matrix = s->chroma_intra_matrix;
     }
-
-    printf("\n dct_prec %i \n", s->dct_precision);
 
     if (dct_dc_size == 0) {
         dct_diff = 0;
@@ -1852,7 +1853,7 @@ static int mpeg4_decode_studio_block(MpegEncContext *s, int n)
     if (s->mpeg_quant)
         block[0] = s->studio_dc_val[cc] * (8 >> s->intra_dc_precision);
     else
-        block[0] = s->studio_dc_val[cc] * ((8 >> s->intra_dc_precision) >> s->dct_precision);
+        block[0] = (s->studio_dc_val[cc] * (8 >> s->intra_dc_precision)) >> s->dct_precision;
 
     block[0] = av_clip(block[0], min, max);
     mismatch ^= block[0];
@@ -1892,18 +1893,18 @@ static int mpeg4_decode_studio_block(MpegEncContext *s, int n)
             run = (1 << (additional_code_len - 1)) + code;
             for (i = 0; i < run; i++) {
                 j = scantable[idx++];
-                block[idx++] = 0;
+                block[j] = 0;
             }
             j = scantable[idx++];
             block[j] = sign ? 1 : -1;
-            // FIXME dequant
+            block[j] = ((8 * 2 * block[j] * quant_matrix[j] * s->qscale) >> s->dct_precision) >> 5;
             mismatch ^= block[j];
         }
         else if (group >= 13 && group <= 20) {
             /* Level value (Table B.49) */
             j = scantable[idx++];
             block[j] = get_xbits(&s->gb, additional_code_len);
-            // FIXME dequant
+            block[j] = ((8 * 2 * block[j] * quant_matrix[j] * s->qscale) >> s->dct_precision) >> 5;
             block[j] = av_clip(block[j], min, max);
             mismatch ^= block[j];
         }
