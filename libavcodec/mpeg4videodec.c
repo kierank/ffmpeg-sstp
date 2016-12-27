@@ -529,6 +529,15 @@ int ff_mpeg4_decode_video_packet_header(Mpeg4DecContext *ctx)
     return 0;
 }
 
+static inline int get_qscale(MpegEncContext *s)
+{
+    int qscale = get_bits(&s->gb, 5);
+    if (s->q_scale_type)
+        return ff_mpeg2_non_linear_qscale[qscale];
+    else
+        return qscale << 1;
+}
+
 /**
  * Decode the next video packet.
  * @return <0 if something went wrong
@@ -547,9 +556,9 @@ int ff_mpeg4_decode_studio_slice_header(Mpeg4DecContext *ctx)
 
         s->mb_x = mb_num % s->mb_width;
         s->mb_y = mb_num / s->mb_width;
-        if (ctx->shape != BIN_ONLY_SHAPE) {
-            quantiser_scale_code = get_bits(gb, 5);
-        }
+
+        if (ctx->shape != BIN_ONLY_SHAPE)
+            s->qscale = get_qscale(s);
 
         if (show_bits1(gb)) {
             skip_bits1(gb);   /* slice_extension_flag */
@@ -1924,9 +1933,8 @@ static int mpeg4_decode_studio_mb(MpegEncContext *s, int16_t block[12][64])
         /* macroblock_type, 1 or 2-bit VLC */
         if (!get_bits1(&s->gb)) {
             skip_bits1(&s->gb);
-            quantiser_scale_code = get_bits(&s->gb, 5);
+            s->qscale = get_qscale(s);
         }
-        printf("\n quant %x \n", quantiser_scale_code);
 
         for (i = 0; i < mpeg4_block_count[s->chroma_format]; i++) {
             mpeg4_decode_studio_block(s, i);
