@@ -1803,7 +1803,7 @@ static int mpeg4_decode_studio_block(MpegEncContext *s, int n)
 {
     Mpeg4DecContext *ctx = (Mpeg4DecContext *)s;
 
-    int level, code, i, cc;
+    int cc, dct_dc_size, dct_diff, code, i;
     VLC *cur_vlc = &ctx->studio_intra_tab[0];
     int16_t coeffs[64];
     int idx = 1;
@@ -1811,27 +1811,28 @@ static int mpeg4_decode_studio_block(MpegEncContext *s, int n)
 
     if (n < 4) {
         cc = 0;
-        code = get_vlc2(&s->gb, ctx->studio_luma_dc.table, STUDIO_INTRA_BITS, 2);
+        dct_dc_size = get_vlc2(&s->gb, ctx->studio_luma_dc.table, STUDIO_INTRA_BITS, 2);
     }
     else {
         cc = ((n - 4) % 2) + 1; /* Table 7-30 */
-        code = get_vlc2(&s->gb, ctx->studio_chroma_dc.table, STUDIO_INTRA_BITS, 2);
+        dct_dc_size = get_vlc2(&s->gb, ctx->studio_chroma_dc.table, STUDIO_INTRA_BITS, 2);
     }
 
-    if (code == 0) {
-        level = 0;
-    } else {
-        level = get_xbits(&s->gb, code);
+    printf("\n dct_prec %i \n", s->dct_precision);
 
-        if (code > 8) {
+    if (dct_dc_size == 0) {
+        dct_diff = 0;
+    } else {
+        dct_diff = get_xbits(&s->gb, dct_dc_size);
+
+        if (dct_dc_size > 8) {
             if (get_bits1(&s->gb) == 0) { /* marker */
                 printf("\n no marker \n");
             }
         }
     }
 
-    // FIXME add the sign logic, might be the same, dunno
-    printf("\n dc level %i \n", level);
+    s->studio_dc_val[cc] += dct_diff;
 
     /* AC Coefficients */
 
