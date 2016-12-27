@@ -1805,9 +1805,14 @@ static int mpeg4_decode_studio_block(MpegEncContext *s, int n)
 
     int cc, dct_dc_size, dct_diff, code, i;
     VLC *cur_vlc = &ctx->studio_intra_tab[0];
-    int16_t coeffs[64];
+    int32_t block[64];
     int idx = 1;
     uint16_t flc;
+    int mismatch;
+    const int min = -1 * ((1 << (s->bit_depth + 6)) - 1);
+    const int max =      ((1 << (s->bit_depth + 6)) - 1);
+
+    mismatch = 1;
 
     if (n < 4) {
         cc = 0;
@@ -1834,8 +1839,15 @@ static int mpeg4_decode_studio_block(MpegEncContext *s, int n)
 
     s->studio_dc_val[cc] += dct_diff;
 
-    /* AC Coefficients */
+    if (s->mpeg_quant)
+        block[0] = s->studio_dc_val[cc] * (8 >> s->intra_dc_precision);
+    else
+        block[0] = s->studio_dc_val[cc] * ((8 >> s->intra_dc_precision) >> s->dct_precision);
 
+    block[0] = av_clip(block[0], min, max);
+    mismatch ^= block[0];
+
+    /* AC Coefficients */
     int group = 0, run = 0;
     int additional_code_len, sign;
 
@@ -1845,7 +1857,7 @@ static int mpeg4_decode_studio_block(MpegEncContext *s, int n)
         additional_code_len = ac_state_tab[group][0];
         cur_vlc = &ctx->studio_intra_tab[ac_state_tab[group][1]];
 
-        printf("\n ac group %i idx %i code_len %i \n", group, idx, additional_code_len);
+        //printf("\n ac group %i idx %i code_len %i \n", group, idx, additional_code_len);
 
         /* End of Block */
         if (group == 0) {
@@ -1858,7 +1870,7 @@ static int mpeg4_decode_studio_block(MpegEncContext *s, int n)
             if (additional_code_len)
                 run += get_bits(&s->gb, additional_code_len);
             for (i = 0; i < run; i++)
-                coeffs[idx++] = 0;
+                block[idx++] = 0;
         }
         else if (group >= 7 && group <= 12) {
             /* Zero run length and +/-1 level (Table B.48) */
@@ -1867,21 +1879,32 @@ static int mpeg4_decode_studio_block(MpegEncContext *s, int n)
             code >>= 1;
             run = (1 << (additional_code_len - 1)) + code;
             for (i = 0; i < run; i++)
-                coeffs[idx++] = 0;
-            coeffs[idx++] = sign ? 1 : -1;
+                block[idx++] = 0;
+            block[idx] = sign ? 1 : -1;
+            mismatch ^= block[idx];
+            idx++;
         }
         else if (group >= 13 && group <= 20) {
             /* Level value (Table B.49) */
-            coeffs[idx++] = get_xbits(&s->gb, additional_code_len);
+            block[idx] = get_xbits(&s->gb, additional_code_len);
+            block[idx] = av_clip(block[idx], min, max);
+            mismatch ^= block[idx];
+            idx++;
         }
         /* Escape */
         else if (group == 21) {
-            printf("\n ESCAPE \n");
-            break;
+            // FIXME this is broke
+            assert(0);
+            additional_code_len = s->bit_depth + s->dct_precision + 4;
+            flc = get_bits(&s->gb, additional_code_len);
+            if (flc >> (additional_code_len-1)) {
+
+            }
+            else
+                block[idx++] = flc;
         }
     }
-
-
+    block[63] ^= mismatch & 1;
 
     return 0;
 }
