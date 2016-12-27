@@ -1873,10 +1873,8 @@ static int mpeg4_decode_studio_block(MpegEncContext *s, int n)
         additional_code_len = ac_state_tab[group][0];
         cur_vlc = &ctx->studio_intra_tab[ac_state_tab[group][1]];
 
-        //printf("\n ac group %i idx %i code_len %i \n", group, idx, additional_code_len);
-
-        /* End of Block */
         if (group == 0) {
+            /* End of Block */
             printf("\n END OF BLOCK coeffs %i\n", idx);
             break;
         }
@@ -1913,8 +1911,8 @@ static int mpeg4_decode_studio_block(MpegEncContext *s, int n)
             block[j] = av_clip(block[j], min, max);
             mismatch ^= block[j];
         }
-        /* Escape */
         else if (group == 21) {
+            /* Escape */
             j = scantable[idx++];
             additional_code_len = s->bit_depth + s->dct_precision + 4;
             flc = get_bits(&s->gb, additional_code_len);
