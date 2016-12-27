@@ -538,6 +538,14 @@ static inline int get_qscale(MpegEncContext *s)
         return qscale << 1;
 }
 
+static void reset_studio_dc_predictors(MpegEncContext *s)
+{
+    /* Reset DC Predictors */
+    s->studio_dc_val[0] =
+    s->studio_dc_val[1] =
+    s->studio_dc_val[2] = 1 << (s->bit_depth + s->dct_precision + s->intra_dc_precision - 1);
+}
+
 /**
  * Decode the next video packet.
  * @return <0 if something went wrong
@@ -572,10 +580,7 @@ int ff_mpeg4_decode_studio_slice_header(Mpeg4DecContext *ctx)
         }
         skip_bits1(gb); /* extra_bit_slice */
 
-        /* Reset DC Predictors */
-        s->studio_dc_val[0] =
-        s->studio_dc_val[1] =
-        s->studio_dc_val[2] = 1 << (s->bit_depth + s->dct_precision + s->intra_dc_precision - 1);
+        reset_studio_dc_predictors(s);
     }
     // FIXME error out
     return 0;
@@ -2933,7 +2938,6 @@ static int decode_smpte_tc(Mpeg4DecContext *ctx, GetBitContext *gb)
 static int decode_studio_vop_header(Mpeg4DecContext *ctx, GetBitContext *gb)
 {
     MpegEncContext *s = &ctx->m;
-    uint8_t vop_coding_type, intra_predictors_reset;
 
     if (get_bits_left(gb) <= 32)
         return 0;
@@ -2956,7 +2960,8 @@ static int decode_studio_vop_header(Mpeg4DecContext *ctx, GetBitContext *gb)
     }
 
     if (s->pict_type == AV_PICTURE_TYPE_I) {
-        intra_predictors_reset = get_bits1(gb); // FIXME
+        if (get_bits1(gb))
+            reset_studio_dc_predictors(s);
     }
 
     if (ctx->shape != BIN_ONLY_SHAPE) {
