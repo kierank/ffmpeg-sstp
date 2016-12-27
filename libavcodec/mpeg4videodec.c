@@ -1812,8 +1812,9 @@ static int mpeg4_decode_studio_block(MpegEncContext *s, int n)
 {
     Mpeg4DecContext *ctx = (Mpeg4DecContext *)s;
 
-    int cc, dct_dc_size, dct_diff, code, i;
+    int cc, dct_dc_size, dct_diff, code, i, j;
     VLC *cur_vlc = &ctx->studio_intra_tab[0];
+    uint8_t *const scantable = s->intra_scantable.permutated;
     int32_t block[64];
     int idx = 1;
     uint16_t flc;
@@ -1878,8 +1879,10 @@ static int mpeg4_decode_studio_block(MpegEncContext *s, int n)
             run = 1 << additional_code_len;
             if (additional_code_len)
                 run += get_bits(&s->gb, additional_code_len);
-            for (i = 0; i < run; i++)
-                block[idx++] = 0;
+            for (i = 0; i < run; i++) {
+                j = scantable[idx++];
+                block[j] = 0;
+            }
         }
         else if (group >= 7 && group <= 12) {
             /* Zero run length and +/-1 level (Table B.48) */
@@ -1887,18 +1890,22 @@ static int mpeg4_decode_studio_block(MpegEncContext *s, int n)
             sign = code & 1;
             code >>= 1;
             run = (1 << (additional_code_len - 1)) + code;
-            for (i = 0; i < run; i++)
+            for (i = 0; i < run; i++) {
+                j = scantable[idx++];
                 block[idx++] = 0;
-            block[idx] = sign ? 1 : -1;
-            mismatch ^= block[idx];
-            idx++;
+            }
+            j = scantable[idx++];
+            block[j] = sign ? 1 : -1;
+            // FIXME dequant
+            mismatch ^= block[j];
         }
         else if (group >= 13 && group <= 20) {
             /* Level value (Table B.49) */
-            block[idx] = get_xbits(&s->gb, additional_code_len);
-            block[idx] = av_clip(block[idx], min, max);
-            mismatch ^= block[idx];
-            idx++;
+            j = scantable[idx++];
+            block[j] = get_xbits(&s->gb, additional_code_len);
+            // FIXME dequant
+            block[j] = av_clip(block[j], min, max);
+            mismatch ^= block[j];
         }
         /* Escape */
         else if (group == 21) {
@@ -1913,6 +1920,10 @@ static int mpeg4_decode_studio_block(MpegEncContext *s, int n)
                 block[idx++] = flc;
         }
     }
+
+    for(; idx < 64; idx++)
+        block[idx] = 0;
+
     block[63] ^= mismatch & 1;
 
     return 0;
@@ -1921,8 +1932,6 @@ static int mpeg4_decode_studio_block(MpegEncContext *s, int n)
 static int mpeg4_decode_studio_mb(MpegEncContext *s, int16_t block[12][64])
 {
     int i;
-    uint8_t quantiser_scale_code = s->qscale;
-
     printf ("__PRETTY_FUNCTION__ = %s\n", __PRETTY_FUNCTION__);
 
     /* StudioMacroblock */
