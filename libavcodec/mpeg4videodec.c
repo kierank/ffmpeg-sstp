@@ -2978,11 +2978,13 @@ static void decode_studiovisualobject(Mpeg4DecContext *ctx, GetBitContext *gb)
             s->low_delay = get_bits1(gb);
             s->mpeg_quant = get_bits1(gb); /* mpeg2_stream */
 
+            /* XXX: Quant Matrix Extension is allowed here, long before
+             *      the alternate_scan flag. What do we do? */
+
             next_start_code_studio(gb);
             extension_and_user_data(gb, 2);
         }
     }
-
 }
 
 /**
