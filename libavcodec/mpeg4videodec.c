@@ -542,7 +542,11 @@ int ff_mpeg4_decode_studio_slice_header(Mpeg4DecContext *ctx)
     if (get_bits_long(gb, 32) == SLICE_START_CODE) {
         uint8_t quantiser_scale_code = 0;
 
-        uint16_t mbn = get_bits(gb, 13); // FIXME, this is a VLC
+        uint16_t mb_num = get_bits(gb, 13); // FIXME, this is a VLC
+        printf("\n mb_num %i \n", mb_num);
+
+        s->mb_x = mb_num % s->mb_width;
+        s->mb_y = mb_num / s->mb_width;
         if (ctx->shape != BIN_ONLY_SHAPE) {
             quantiser_scale_code = get_bits(gb, 5);
         }
