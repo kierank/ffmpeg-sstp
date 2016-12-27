@@ -1899,8 +1899,10 @@ static int mpeg4_decode_studio_mb(MpegEncContext *s, int16_t block[12][64])
         printf("\n dpcm \n");
     }
 
-    if (show_bits(&s->gb, 23) == 0)
+    if (show_bits(&s->gb, 23) == 0) {
+        next_start_code_studio(&s->gb);
         return SLICE_END;
+    }
 
     return SLICE_OK;
 }
