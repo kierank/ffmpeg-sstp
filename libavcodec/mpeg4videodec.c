@@ -2834,7 +2834,7 @@ static void read_quant_matrix(GetBitContext *gb)
     next_start_code_studio(gb);
 }
 
-static void extension_and_user_data(GetBitContext *gb, int id)
+static void extension_and_user_data(MpegEncContext *s, GetBitContext *gb, int id)
 {
     uint32_t startcode;
     int i;
@@ -2925,7 +2925,7 @@ static int decode_studio_vop_header(Mpeg4DecContext *ctx, GetBitContext *gb)
     }
 
     next_start_code_studio(gb);
-    extension_and_user_data(gb, 4);
+    extension_and_user_data(s, gb, 4);
 
     return 0;
 }
@@ -2944,7 +2944,7 @@ static void decode_studiovisualobject(Mpeg4DecContext *ctx, GetBitContext *gb)
         uint8_t vot = get_bits(gb, 4); /* visual_object_type */
 
         next_start_code_studio(gb);
-        extension_and_user_data(gb, 1);
+        extension_and_user_data(s, gb, 1);
 
         if (vot == VOT_VIDEO_ID) {
             /* StudioVideoObjectLayer */
@@ -2994,7 +2994,7 @@ static void decode_studiovisualobject(Mpeg4DecContext *ctx, GetBitContext *gb)
              *      the alternate_scan flag. What do we do? */
 
             next_start_code_studio(gb);
-            extension_and_user_data(gb, 2);
+            extension_and_user_data(s, gb, 2);
         }
     }
 }
@@ -3116,7 +3116,7 @@ int ff_mpeg4_decode_picture_header(Mpeg4DecContext *ctx, GetBitContext *gb)
                 (s->avctx->level > 0 && s->avctx->level < 9)) {
                 s->studio_profile = 1;
                 next_start_code_studio(gb);
-                extension_and_user_data(gb, 0);
+                extension_and_user_data(s, gb, 0);
 
                 decode_studiovisualobject(ctx, gb);
                 break;
