@@ -1895,6 +1895,7 @@ static int mpeg4_decode_studio_mb(MpegEncContext *s, int16_t block[12][64])
 
     /* StudioMacroblock */
     /* Assumes I-VOP */
+    s->mb_intra = 1;
     if (get_bits1(&s->gb)) { /* compression_mode */
         /* DCT */
         /* macroblock_type, 1 or 2-bit VLC */
