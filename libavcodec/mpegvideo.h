@@ -382,6 +382,7 @@ typedef struct MpegEncContext {
     /* MPEG-4 specific */
     int bit_depth;
     int studio_profile;
+    int16_t studio_dc_val[3];
     int dct_precision;
     ///< number of bits to represent the fractional part of time (encoder only)
     int time_increment_bits;
