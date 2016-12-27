@@ -1810,7 +1810,7 @@ static int ac_state_tab[22][2] =
     {6, 8},
     {7, 9},
     {8, 10},
-    {0, 0}
+    {0, 11}
 };
 
 static int mpeg4_decode_studio_block(MpegEncContext *s, int n)
