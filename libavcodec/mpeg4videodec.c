@@ -1915,15 +1915,14 @@ static int mpeg4_decode_studio_block(MpegEncContext *s, int n)
         }
         /* Escape */
         else if (group == 21) {
-            // FIXME this is broke
-            assert(0);
+            j = scantable[idx++];
             additional_code_len = s->bit_depth + s->dct_precision + 4;
             flc = get_bits(&s->gb, additional_code_len);
-            if (flc >> (additional_code_len-1)) {
-
-            }
+            if (flc >> (additional_code_len-1))
+                block[j] = -1 * (( flc^((1 << additional_code_len) -1 )) + 1);
             else
-                block[idx++] = flc;
+                block[j] = flc;
+            block[j] = av_clip(block[j], min, max);
         }
     }
 
