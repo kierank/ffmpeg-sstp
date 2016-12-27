@@ -563,11 +563,10 @@ int ff_mpeg4_decode_studio_slice_header(Mpeg4DecContext *ctx)
         }
         skip_bits1(gb); /* extra_bit_slice */
 
-        /* Reset DC Predictors FIXME this is broke */
+        /* Reset DC Predictors */
         s->studio_dc_val[0] =
         s->studio_dc_val[1] =
         s->studio_dc_val[2] = 1 << (s->bit_depth + s->dct_precision + s->intra_dc_precision - 1);
-        printf("\n reset dc predictor %i \n", s->dc_val[2]);
     }
     // FIXME error out
     return 0;
