@@ -1803,17 +1803,20 @@ static int mpeg4_decode_studio_block(MpegEncContext *s, int n)
 {
     Mpeg4DecContext *ctx = (Mpeg4DecContext *)s;
 
-    int level, code, i;
+    int level, code, i, cc;
     VLC *cur_vlc = &ctx->studio_intra_tab[0];
     int16_t coeffs[64];
     int idx = 1;
+    uint16_t flc;
 
-    if (n < 4)
+    if (n < 4) {
+        cc = 0;
         code = get_vlc2(&s->gb, ctx->studio_luma_dc.table, STUDIO_INTRA_BITS, 2);
-    else
+    }
+    else {
+        cc = ((n - 4) % 2) + 1; /* Table 7-30 */
         code = get_vlc2(&s->gb, ctx->studio_chroma_dc.table, STUDIO_INTRA_BITS, 2);
-
-    printf("\n dc code %i \n", code);
+    }
 
     if (code == 0) {
         level = 0;
