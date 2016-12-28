@@ -1897,14 +1897,14 @@ static int mpeg4_decode_studio_block(MpegEncContext *s, int32_t *block, int n)
             idx += run;
             j = scantable[idx++];
             block[j] = sign ? 1 : -1;
-            block[j] = ((8 * 2 * block[j] * quant_matrix[j] * s->qscale) >> s->dct_precision) >> 5;
+            block[j] = ((8 * 2 * block[j] * quant_matrix[idx] * s->qscale) >> s->dct_precision) / 32;
             mismatch ^= block[j];
         }
         else if (group >= 13 && group <= 20) {
             /* Level value (Table B.49) */
             j = scantable[idx++];
             block[j] = get_xbits(&s->gb, additional_code_len);
-            block[j] = ((8 * 2 * block[j] * quant_matrix[j] * s->qscale) >> s->dct_precision) >> 5;
+            block[j] = ((8 * 2 * block[j] * quant_matrix[idx] * s->qscale) >> s->dct_precision) / 32;
             block[j] = av_clip(block[j], min, max);
             mismatch ^= block[j];
         }
@@ -1917,7 +1917,8 @@ static int mpeg4_decode_studio_block(MpegEncContext *s, int32_t *block, int n)
                 block[j] = -1 * (( flc^((1 << additional_code_len) -1 )) + 1);
             else
                 block[j] = flc;
-            block[j] = ((8 * 2 * block[j] * quant_matrix[j] * s->qscale) >> s->dct_precision) >> 5;
+
+            block[j] = ((8 * 2 * block[j] * quant_matrix[idx] * s->qscale) >> s->dct_precision) / 32;
             block[j] = av_clip(block[j], min, max);
         }
     }
