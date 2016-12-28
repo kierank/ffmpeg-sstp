@@ -1898,6 +1898,7 @@ static int mpeg4_decode_studio_block(MpegEncContext *s, int32_t *block, int n)
             j = scantable[idx++];
             block[j] = sign ? 1 : -1;
             block[j] = ((8 * 2 * block[j] * quant_matrix[idx] * s->qscale) >> s->dct_precision) / 32;
+            block[j] = av_clip(block[j], min, max);
             mismatch ^= block[j];
         }
         else if (group >= 13 && group <= 20) {
