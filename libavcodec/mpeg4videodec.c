@@ -1822,7 +1822,7 @@ static int mpeg4_decode_studio_block(MpegEncContext *s, int32_t *block, int n)
     uint8_t *const scantable = s->intra_scantable.permutated;
     const uint16_t *quant_matrix;
     int idx = 1;
-    uint16_t flc;
+    uint32_t flc;
     int mismatch;
     const int min = -1 * ((1 << (s->avctx->bits_per_raw_sample + 6)) - 1);
     const int max =      ((1 << (s->avctx->bits_per_raw_sample + 6)) - 1);
