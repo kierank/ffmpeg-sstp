@@ -380,7 +380,6 @@ typedef struct MpegEncContext {
     int custom_pcf;
 
     /* MPEG-4 specific */
-    int bit_depth;
     int studio_profile;
     int32_t studio_dc_val[3];
     int dct_precision;
