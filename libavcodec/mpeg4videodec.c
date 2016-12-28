@@ -1829,6 +1829,8 @@ static int mpeg4_decode_studio_block(MpegEncContext *s, int32_t *block, int n)
 
     mismatch = 1;
 
+    memset(block, 0, 64 * sizeof(int32_t));
+
     if (n < 4) {
         cc = 0;
         dct_dc_size = get_vlc2(&s->gb, ctx->studio_luma_dc.table, STUDIO_INTRA_BITS, 2);
@@ -1923,9 +1925,6 @@ static int mpeg4_decode_studio_block(MpegEncContext *s, int32_t *block, int n)
             block[j] = av_clip(block[j], min, max);
         }
     }
-
-    for(; idx < 64; idx++)
-        block[idx] = 0;
 
     block[63] ^= mismatch & 1;
 
