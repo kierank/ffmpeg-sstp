@@ -216,7 +216,8 @@ int ff_h263_resync(MpegEncContext *s){
     /* In MPEG-4 studio mode look for a new slice startcode
      * and decode slice header */
     if(s->codec_id==AV_CODEC_ID_MPEG4 && s->studio_profile) {
-
+        // FIXME search for new slice startcode if not there already
+        return pos;
     }
 
     if(s->codec_id==AV_CODEC_ID_MPEG4){
