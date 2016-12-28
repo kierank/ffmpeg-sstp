@@ -1885,10 +1885,8 @@ static int mpeg4_decode_studio_block(MpegEncContext *s, int32_t *block, int n)
             run = 1 << additional_code_len;
             if (additional_code_len)
                 run += get_bits(&s->gb, additional_code_len);
-            for (i = 0; i < run; i++) {
-                j = scantable[idx++];
-                block[j] = 0;
-            }
+            idx += run;
+
         }
         else if (group >= 7 && group <= 12) {
             /* Zero run length and +/-1 level (Table B.48) */
@@ -1896,10 +1894,7 @@ static int mpeg4_decode_studio_block(MpegEncContext *s, int32_t *block, int n)
             sign = code & 1;
             code >>= 1;
             run = (1 << (additional_code_len - 1)) + code;
-            for (i = 0; i < run; i++) {
-                j = scantable[idx++];
-                block[j] = 0;
-            }
+            idx += run;
             j = scantable[idx++];
             block[j] = sign ? 1 : -1;
             block[j] = ((8 * 2 * block[j] * quant_matrix[j] * s->qscale) >> s->dct_precision) >> 5;
@@ -1922,6 +1917,7 @@ static int mpeg4_decode_studio_block(MpegEncContext *s, int32_t *block, int n)
                 block[j] = -1 * (( flc^((1 << additional_code_len) -1 )) + 1);
             else
                 block[j] = flc;
+            block[j] = ((8 * 2 * block[j] * quant_matrix[j] * s->qscale) >> s->dct_precision) >> 5;
             block[j] = av_clip(block[j], min, max);
         }
     }
