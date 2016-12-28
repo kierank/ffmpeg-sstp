@@ -543,7 +543,7 @@ static void reset_studio_dc_predictors(MpegEncContext *s)
     /* Reset DC Predictors */
     s->studio_dc_val[0] =
     s->studio_dc_val[1] =
-    s->studio_dc_val[2] = 1 << (s->bit_depth + s->dct_precision + s->intra_dc_precision - 1);
+    s->studio_dc_val[2] = 1 << (s->avctx->bits_per_raw_sample + s->dct_precision + s->intra_dc_precision - 1);
 }
 
 /**
@@ -1824,8 +1824,8 @@ static int mpeg4_decode_studio_block(MpegEncContext *s, int32_t *block, int n)
     int idx = 1;
     uint16_t flc;
     int mismatch;
-    const int min = -1 * ((1 << (s->bit_depth + 6)) - 1);
-    const int max =      ((1 << (s->bit_depth + 6)) - 1);
+    const int min = -1 * ((1 << (s->avctx->bits_per_raw_sample + 6)) - 1);
+    const int max =      ((1 << (s->avctx->bits_per_raw_sample + 6)) - 1);
 
     mismatch = 1;
 
@@ -1913,7 +1913,7 @@ static int mpeg4_decode_studio_block(MpegEncContext *s, int32_t *block, int n)
         else if (group == 21) {
             /* Escape */
             j = scantable[idx++];
-            additional_code_len = s->bit_depth + s->dct_precision + 4;
+            additional_code_len = s->avctx->bits_per_raw_sample + s->dct_precision + 4;
             flc = get_bits(&s->gb, additional_code_len);
             if (flc >> (additional_code_len-1))
                 block[j] = -1 * (( flc^((1 << additional_code_len) -1 )) + 1);
@@ -3027,8 +3027,8 @@ static void decode_studiovisualobject(Mpeg4DecContext *ctx, GetBitContext *gb)
             if (ctx->shape != BIN_ONLY_SHAPE) {
                 skip_bits1(gb); /* rgb_components */
                 s->chroma_format = get_bits(gb, 2); /* chroma_format */
-                s->bit_depth = get_bits(gb, 4); /* bit_depth */
-                if (s->bit_depth == 10) {
+                s->avctx->bits_per_raw_sample = get_bits(gb, 4); /* bit_depth */
+                if (s->avctx->bits_per_raw_sample == 10) {
                     s->avctx->pix_fmt = s->chroma_format == CHROMA_422 ? AV_PIX_FMT_YUV422P10 : AV_PIX_FMT_YUV444P10;
                 }
             }
@@ -3371,7 +3371,7 @@ static av_cold int decode_init(AVCodecContext *avctx)
     s->h263_pred = 1;
     s->low_delay = 0; /* default, might be overridden in the vol header during header parsing */
     s->decode_mb = mpeg4_decode_mb;
-    s->bit_depth = 8;
+    s->avctx->bits_per_raw_sample = 8;
     ctx->time_increment_bits = 4; /* default value for broken headers */
 
     avctx->chroma_sample_location = AVCHROMA_LOC_LEFT;
