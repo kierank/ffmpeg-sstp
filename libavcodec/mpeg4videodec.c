@@ -1813,7 +1813,7 @@ static int ac_state_tab[22][2] =
     {0, 11}
 };
 
-static int mpeg4_decode_studio_block(MpegEncContext *s, int n)
+static int mpeg4_decode_studio_block(MpegEncContext *s, int32_t *block, int n)
 {
     Mpeg4DecContext *ctx = (Mpeg4DecContext *)s;
 
@@ -1821,7 +1821,6 @@ static int mpeg4_decode_studio_block(MpegEncContext *s, int n)
     VLC *cur_vlc = &ctx->studio_intra_tab[0];
     uint8_t *const scantable = s->intra_scantable.permutated;
     const uint16_t *quant_matrix;
-    int32_t block[64];
     int idx = 1;
     uint16_t flc;
     int mismatch;
@@ -1949,7 +1948,7 @@ static int mpeg4_decode_studio_mb(MpegEncContext *s, int16_t block[12][64])
         }
 
         for (i = 0; i < mpeg4_block_count[s->chroma_format]; i++) {
-            mpeg4_decode_studio_block(s, i);
+            mpeg4_decode_studio_block(s, (int32_t*)block[i], i);
         }
     } else {
         /* DPCM */
