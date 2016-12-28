@@ -3003,7 +3003,7 @@ static void decode_studiovisualobject(Mpeg4DecContext *ctx, GetBitContext *gb)
 {
     uint32_t startcode;
     MpegEncContext *s = &ctx->m;
-    int i;
+    int i, width, height;
 
     startcode = get_bits_long(gb, 32);
 
@@ -3029,13 +3029,25 @@ static void decode_studiovisualobject(Mpeg4DecContext *ctx, GetBitContext *gb)
                 skip_bits1(gb); /* rgb_components */
                 s->chroma_format = get_bits(gb, 2); /* chroma_format */
                 s->bit_depth = get_bits(gb, 4); /* bit_depth */
+                if (s->bit_depth == 10) {
+                    s->avctx->pix_fmt = s->chroma_format == CHROMA_422 ? AV_PIX_FMT_YUV422P10 : AV_PIX_FMT_YUV444P10;
+                }
             }
             if (ctx->shape == RECT_SHAPE) {
                 check_marker(s->avctx, gb, "before video_object_layer_width");
-                s->width = get_bits(gb, 14); /* video_object_layer_width */
+                width = get_bits(gb, 14); /* video_object_layer_width */
                 check_marker(s->avctx, gb, "before video_object_layer_height");
-                s->height = get_bits(gb, 14); /* video_object_layer_height */
+                height = get_bits(gb, 14); /* video_object_layer_height */
                 check_marker(s->avctx, gb, "after video_object_layer_height");
+
+                /* Do the same check as non-studio profile */
+                if (width && height) {
+                    if (s->width && s->height &&
+                        (s->width != width || s->height != height))
+                        s->context_reinit = 1;
+                    s->width  = width;
+                    s->height = height;
+                }
             }
             s->aspect_ratio_info = get_bits(gb, 4);
             if (s->aspect_ratio_info == FF_ASPECT_EXTENDED) {
@@ -3382,6 +3394,11 @@ static const AVClass mpeg4_class = {
     .version    = LIBAVUTIL_VERSION_INT,
 };
 
+const enum AVPixelFormat mpeg4_pix_fmts[] = {
+    AV_PIX_FMT_YUV422P10,
+    AV_PIX_FMT_NONE
+};
+
 AVCodec ff_mpeg4_decoder = {
     .name                  = "mpeg4",
     .long_name             = NULL_IF_CONFIG_SMALL("MPEG-4 part 2"),
@@ -3397,7 +3414,7 @@ AVCodec ff_mpeg4_decoder = {
     .caps_internal         = FF_CODEC_CAP_SKIP_FRAME_FILL_PARAM,
     .flush                 = ff_mpeg_flush,
     .max_lowres            = 3,
-    .pix_fmts              = ff_h263_hwaccel_pixfmt_list_420,
+    .pix_fmts              = mpeg4_pix_fmts,
     .profiles              = NULL_IF_CONFIG_SMALL(ff_mpeg4_video_profiles),
     .update_thread_context = ONLY_IF_THREADS_ENABLED(mpeg4_update_thread_context),
     .priv_class = &mpeg4_class,
