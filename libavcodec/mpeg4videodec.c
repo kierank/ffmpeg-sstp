@@ -1859,7 +1859,7 @@ static int mpeg4_decode_studio_block(MpegEncContext *s, int32_t *block, int n)
     if (s->mpeg_quant)
         block[0] = s->studio_dc_val[cc] * (8 >> s->intra_dc_precision);
     else
-        block[0] = (s->studio_dc_val[cc] * (8 >> s->intra_dc_precision)) >> s->dct_precision;
+        block[0] = s->studio_dc_val[cc] * (8 >> s->intra_dc_precision) * (8 >> s->dct_precision);
     // FIXME support mpeg_quant for AC coefficients
 
     block[0] = av_clip(block[0], min, max);
