@@ -915,11 +915,9 @@ av_cold int ff_mpv_common_init(MpegEncContext *s)
     dct_init(s);
 
     /* set chroma shifts */
-    ret = av_pix_fmt_get_chroma_sub_sample(s->avctx->pix_fmt,
-                                           &s->chroma_x_shift,
-                                           &s->chroma_y_shift);
-    if (ret)
-        return ret;
+    avcodec_get_chroma_sub_sample(s->avctx->pix_fmt,
+                                  &s->chroma_x_shift,
+                                  &s->chroma_y_shift);
 
     FF_ALLOCZ_OR_GOTO(s->avctx, s->picture,
                       MAX_PICTURE_COUNT * sizeof(Picture), fail);
@@ -2013,169 +2011,39 @@ void mpv_reconstruct_mb_internal(MpegEncContext *s, int16_t block[12][64],
             dest_cr= s->sc.b_scratchpad+32*linesize;
         }
 
-        if (!s->mb_intra) {
-            /* motion handling */
-            /* decoding or more than one mb_type (MC was already done otherwise) */
-            if(!s->encoding){
+        // KK
+        const int act_block_size = block_size * 2;
+        s->idsp.idct_put(dest_y,                           dct_linesize, s->block2[0]);
+        s->idsp.idct_put(dest_y              + act_block_size, dct_linesize, s->block2[1]);
+        s->idsp.idct_put(dest_y + dct_offset,              dct_linesize, s->block2[2]);
+        s->idsp.idct_put(dest_y + dct_offset + act_block_size, dct_linesize, s->block2[3]);
 
-                if(HAVE_THREADS && s->avctx->active_thread_type&FF_THREAD_FRAME) {
-                    if (s->mv_dir & MV_DIR_FORWARD) {
-                        ff_thread_await_progress(&s->last_picture_ptr->tf,
-                                                 lowest_referenced_row(s, 0),
-                                                 0);
-                    }
-                    if (s->mv_dir & MV_DIR_BACKWARD) {
-                        ff_thread_await_progress(&s->next_picture_ptr->tf,
-                                                 lowest_referenced_row(s, 1),
-                                                 0);
-                    }
+        dct_linesize = uvlinesize << s->interlaced_dct;
+        dct_offset   = s->interlaced_dct ? uvlinesize : uvlinesize*block_size;
+
+#if 0
+        if( s->mb_x == 0 && s->mb_y == 0) {
+            printf("\n chroma coeffs \n");
+            for( int a = 0; a < 8; a++ ) {
+                for( int b = 0; b < 8; b++ ) {
+                    printf("%10i ", s->block2[4][8*a+b]);
                 }
-
-                if(lowres_flag){
-                    h264_chroma_mc_func *op_pix = s->h264chroma.put_h264_chroma_pixels_tab;
-
-                    if (s->mv_dir & MV_DIR_FORWARD) {
-                        MPV_motion_lowres(s, dest_y, dest_cb, dest_cr, 0, s->last_picture.f->data, op_pix);
-                        op_pix = s->h264chroma.avg_h264_chroma_pixels_tab;
-                    }
-                    if (s->mv_dir & MV_DIR_BACKWARD) {
-                        MPV_motion_lowres(s, dest_y, dest_cb, dest_cr, 1, s->next_picture.f->data, op_pix);
-                    }
-                }else{
-                    op_qpix = s->me.qpel_put;
-                    if ((!s->no_rounding) || s->pict_type==AV_PICTURE_TYPE_B){
-                        op_pix = s->hdsp.put_pixels_tab;
-                    }else{
-                        op_pix = s->hdsp.put_no_rnd_pixels_tab;
-                    }
-                    if (s->mv_dir & MV_DIR_FORWARD) {
-                        ff_mpv_motion(s, dest_y, dest_cb, dest_cr, 0, s->last_picture.f->data, op_pix, op_qpix);
-                        op_pix = s->hdsp.avg_pixels_tab;
-                        op_qpix= s->me.qpel_avg;
-                    }
-                    if (s->mv_dir & MV_DIR_BACKWARD) {
-                        ff_mpv_motion(s, dest_y, dest_cb, dest_cr, 1, s->next_picture.f->data, op_pix, op_qpix);
-                    }
-                }
+                printf("\n");
             }
-
-            /* skip dequant / idct if we are really late ;) */
-            if(s->avctx->skip_idct){
-                if(  (s->avctx->skip_idct >= AVDISCARD_NONREF && s->pict_type == AV_PICTURE_TYPE_B)
-                   ||(s->avctx->skip_idct >= AVDISCARD_NONKEY && s->pict_type != AV_PICTURE_TYPE_I)
-                   || s->avctx->skip_idct >= AVDISCARD_ALL)
-                    goto skip_idct;
-            }
-
-            /* add dct residue */
-            if(s->encoding || !(   s->msmpeg4_version || s->codec_id==AV_CODEC_ID_MPEG1VIDEO || s->codec_id==AV_CODEC_ID_MPEG2VIDEO
-                                || (s->codec_id==AV_CODEC_ID_MPEG4 && !s->mpeg_quant))){
-                add_dequant_dct(s, block[0], 0, dest_y                          , dct_linesize, s->qscale);
-                add_dequant_dct(s, block[1], 1, dest_y              + block_size, dct_linesize, s->qscale);
-                add_dequant_dct(s, block[2], 2, dest_y + dct_offset             , dct_linesize, s->qscale);
-                add_dequant_dct(s, block[3], 3, dest_y + dct_offset + block_size, dct_linesize, s->qscale);
-
-                if (!CONFIG_GRAY || !(s->avctx->flags & AV_CODEC_FLAG_GRAY)) {
-                    if (s->chroma_y_shift){
-                        add_dequant_dct(s, block[4], 4, dest_cb, uvlinesize, s->chroma_qscale);
-                        add_dequant_dct(s, block[5], 5, dest_cr, uvlinesize, s->chroma_qscale);
-                    }else{
-                        dct_linesize >>= 1;
-                        dct_offset >>=1;
-                        add_dequant_dct(s, block[4], 4, dest_cb,              dct_linesize, s->chroma_qscale);
-                        add_dequant_dct(s, block[5], 5, dest_cr,              dct_linesize, s->chroma_qscale);
-                        add_dequant_dct(s, block[6], 6, dest_cb + dct_offset, dct_linesize, s->chroma_qscale);
-                        add_dequant_dct(s, block[7], 7, dest_cr + dct_offset, dct_linesize, s->chroma_qscale);
-                    }
-                }
-            } else if(is_mpeg12 || (s->codec_id != AV_CODEC_ID_WMV2)){
-                add_dct(s, block[0], 0, dest_y                          , dct_linesize);
-                add_dct(s, block[1], 1, dest_y              + block_size, dct_linesize);
-                add_dct(s, block[2], 2, dest_y + dct_offset             , dct_linesize);
-                add_dct(s, block[3], 3, dest_y + dct_offset + block_size, dct_linesize);
-
-                if (!CONFIG_GRAY || !(s->avctx->flags & AV_CODEC_FLAG_GRAY)) {
-                    if(s->chroma_y_shift){//Chroma420
-                        add_dct(s, block[4], 4, dest_cb, uvlinesize);
-                        add_dct(s, block[5], 5, dest_cr, uvlinesize);
-                    }else{
-                        //chroma422
-                        dct_linesize = uvlinesize << s->interlaced_dct;
-                        dct_offset   = s->interlaced_dct ? uvlinesize : uvlinesize*block_size;
-
-                        add_dct(s, block[4], 4, dest_cb, dct_linesize);
-                        add_dct(s, block[5], 5, dest_cr, dct_linesize);
-                        add_dct(s, block[6], 6, dest_cb+dct_offset, dct_linesize);
-                        add_dct(s, block[7], 7, dest_cr+dct_offset, dct_linesize);
-                        if(!s->chroma_x_shift){//Chroma444
-                            add_dct(s, block[8], 8, dest_cb+block_size, dct_linesize);
-                            add_dct(s, block[9], 9, dest_cr+block_size, dct_linesize);
-                            add_dct(s, block[10], 10, dest_cb+block_size+dct_offset, dct_linesize);
-                            add_dct(s, block[11], 11, dest_cr+block_size+dct_offset, dct_linesize);
-                        }
-                    }
-                }//fi gray
-            }
-            else if (CONFIG_WMV2_DECODER || CONFIG_WMV2_ENCODER) {
-                ff_wmv2_add_mb(s, block, dest_y, dest_cb, dest_cr);
-            }
-        } else {
-            /* dct only in intra block */
-            if(s->encoding || !(s->codec_id==AV_CODEC_ID_MPEG1VIDEO || s->codec_id==AV_CODEC_ID_MPEG2VIDEO)){
-                put_dct(s, block[0], 0, dest_y                          , dct_linesize, s->qscale);
-                put_dct(s, block[1], 1, dest_y              + block_size, dct_linesize, s->qscale);
-                put_dct(s, block[2], 2, dest_y + dct_offset             , dct_linesize, s->qscale);
-                put_dct(s, block[3], 3, dest_y + dct_offset + block_size, dct_linesize, s->qscale);
-
-                if (!CONFIG_GRAY || !(s->avctx->flags & AV_CODEC_FLAG_GRAY)) {
-                    if(s->chroma_y_shift){
-                        put_dct(s, block[4], 4, dest_cb, uvlinesize, s->chroma_qscale);
-                        put_dct(s, block[5], 5, dest_cr, uvlinesize, s->chroma_qscale);
-                    }else{
-                        dct_offset >>=1;
-                        dct_linesize >>=1;
-                        put_dct(s, block[4], 4, dest_cb,              dct_linesize, s->chroma_qscale);
-                        put_dct(s, block[5], 5, dest_cr,              dct_linesize, s->chroma_qscale);
-                        put_dct(s, block[6], 6, dest_cb + dct_offset, dct_linesize, s->chroma_qscale);
-                        put_dct(s, block[7], 7, dest_cr + dct_offset, dct_linesize, s->chroma_qscale);
-                    }
-                }
-            }else{
-                s->idsp.idct_put(dest_y,                           dct_linesize, block[0]);
-                s->idsp.idct_put(dest_y              + block_size, dct_linesize, block[1]);
-                s->idsp.idct_put(dest_y + dct_offset,              dct_linesize, block[2]);
-                s->idsp.idct_put(dest_y + dct_offset + block_size, dct_linesize, block[3]);
-
-                if (!CONFIG_GRAY || !(s->avctx->flags & AV_CODEC_FLAG_GRAY)) {
-                    if(s->chroma_y_shift){
-                        s->idsp.idct_put(dest_cb, uvlinesize, block[4]);
-                        s->idsp.idct_put(dest_cr, uvlinesize, block[5]);
-                    }else{
-
-                        dct_linesize = uvlinesize << s->interlaced_dct;
-                        dct_offset   = s->interlaced_dct ? uvlinesize : uvlinesize*block_size;
-
-                        s->idsp.idct_put(dest_cb,              dct_linesize, block[4]);
-                        s->idsp.idct_put(dest_cr,              dct_linesize, block[5]);
-                        s->idsp.idct_put(dest_cb + dct_offset, dct_linesize, block[6]);
-                        s->idsp.idct_put(dest_cr + dct_offset, dct_linesize, block[7]);
-                        if(!s->chroma_x_shift){//Chroma444
-                            s->idsp.idct_put(dest_cb + block_size,              dct_linesize, block[8]);
-                            s->idsp.idct_put(dest_cr + block_size,              dct_linesize, block[9]);
-                            s->idsp.idct_put(dest_cb + block_size + dct_offset, dct_linesize, block[10]);
-                            s->idsp.idct_put(dest_cr + block_size + dct_offset, dct_linesize, block[11]);
-                        }
-                    }
-                }//gray
-            }
+            printf("\n \n");
         }
-skip_idct:
-        if(!readable){
-            s->hdsp.put_pixels_tab[0][0](s->dest[0], dest_y ,   linesize,16);
-            if (!CONFIG_GRAY || !(s->avctx->flags & AV_CODEC_FLAG_GRAY)) {
-                s->hdsp.put_pixels_tab[s->chroma_x_shift][0](s->dest[1], dest_cb, uvlinesize,16 >> s->chroma_y_shift);
-                s->hdsp.put_pixels_tab[s->chroma_x_shift][0](s->dest[2], dest_cr, uvlinesize,16 >> s->chroma_y_shift);
-            }
+        printf("\n linesize %i \n", dct_linesize);
+#endif
+
+        s->idsp.idct_put(dest_cb,              dct_linesize, s->block2[4]);
+        s->idsp.idct_put(dest_cr,              dct_linesize, s->block2[5]);
+        s->idsp.idct_put(dest_cb + dct_offset, dct_linesize, s->block2[6]);
+        s->idsp.idct_put(dest_cr + dct_offset, dct_linesize, s->block2[7]);
+        if(!s->chroma_x_shift){//Chroma444
+            s->idsp.idct_put(dest_cb + act_block_size,              dct_linesize, s->block2[8]);
+            s->idsp.idct_put(dest_cr + act_block_size,              dct_linesize, s->block2[9]);
+            s->idsp.idct_put(dest_cb + act_block_size + dct_offset, dct_linesize, s->block2[10]);
+            s->idsp.idct_put(dest_cr + act_block_size + dct_offset, dct_linesize, s->block2[11]);
         }
     }
 }
@@ -2202,7 +2070,8 @@ void ff_mpeg_draw_horiz_band(MpegEncContext *s, int y, int h)
 void ff_init_block_index(MpegEncContext *s){ //FIXME maybe rename
     const int linesize   = s->current_picture.f->linesize[0]; //not s->linesize as this would be wrong for field pics
     const int uvlinesize = s->current_picture.f->linesize[1];
-    const int mb_size= 4 - s->avctx->lowres;
+    const int mb_width= 5 - s->avctx->lowres;
+    const int mb_height= 4 - s->avctx->lowres;
 
     s->block_index[0]= s->b8_stride*(s->mb_y*2    ) - 2 + s->mb_x*2;
     s->block_index[1]= s->b8_stride*(s->mb_y*2    ) - 1 + s->mb_x*2;
@@ -2212,20 +2081,20 @@ void ff_init_block_index(MpegEncContext *s){ //FIXME maybe rename
     s->block_index[5]= s->mb_stride*(s->mb_y + s->mb_height + 2) + s->b8_stride*s->mb_height*2 + s->mb_x - 1;
     //block_index is not used by mpeg2, so it is not affected by chroma_format
 
-    s->dest[0] = s->current_picture.f->data[0] + (int)((s->mb_x - 1U) <<  mb_size);
-    s->dest[1] = s->current_picture.f->data[1] + (int)((s->mb_x - 1U) << (mb_size - s->chroma_x_shift));
-    s->dest[2] = s->current_picture.f->data[2] + (int)((s->mb_x - 1U) << (mb_size - s->chroma_x_shift));
+    s->dest[0] = s->current_picture.f->data[0] + (int)((s->mb_x) <<  mb_width);
+    s->dest[1] = s->current_picture.f->data[1] + (int)((s->mb_x) << (mb_width - s->chroma_x_shift));
+    s->dest[2] = s->current_picture.f->data[2] + (int)((s->mb_x) << (mb_width - s->chroma_x_shift));
 
     if(!(s->pict_type==AV_PICTURE_TYPE_B && s->avctx->draw_horiz_band && s->picture_structure==PICT_FRAME))
     {
         if(s->picture_structure==PICT_FRAME){
-        s->dest[0] += s->mb_y *   linesize << mb_size;
-        s->dest[1] += s->mb_y * uvlinesize << (mb_size - s->chroma_y_shift);
-        s->dest[2] += s->mb_y * uvlinesize << (mb_size - s->chroma_y_shift);
+        s->dest[0] += s->mb_y *   linesize << mb_height;
+        s->dest[1] += s->mb_y * uvlinesize << (mb_height - s->chroma_y_shift);
+        s->dest[2] += s->mb_y * uvlinesize << (mb_height - s->chroma_y_shift);
         }else{
-            s->dest[0] += (s->mb_y>>1) *   linesize << mb_size;
-            s->dest[1] += (s->mb_y>>1) * uvlinesize << (mb_size - s->chroma_y_shift);
-            s->dest[2] += (s->mb_y>>1) * uvlinesize << (mb_size - s->chroma_y_shift);
+            s->dest[0] += (s->mb_y>>1) *   linesize << mb_height;
+            s->dest[1] += (s->mb_y>>1) * uvlinesize << (mb_height - s->chroma_y_shift);
+            s->dest[2] += (s->mb_y>>1) * uvlinesize << (mb_height - s->chroma_y_shift);
             av_assert1((s->mb_y&1) == (s->picture_structure == PICT_BOTTOM_FIELD));
         }
     }

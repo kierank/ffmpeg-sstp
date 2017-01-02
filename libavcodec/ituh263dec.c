@@ -213,6 +213,8 @@ static int h263_decode_gob_header(MpegEncContext *s)
 int ff_h263_resync(MpegEncContext *s){
     int left, pos, ret;
 
+    //printf ("__PRETTY_FUNCTION__ = %s\n", __PRETTY_FUNCTION__);
+
     /* In MPEG-4 studio mode look for a new slice startcode
      * and decode slice header */
     if(s->codec_id==AV_CODEC_ID_MPEG4 && s->studio_profile) {

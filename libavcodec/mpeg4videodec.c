@@ -444,6 +444,8 @@ int ff_mpeg4_decode_video_packet_header(Mpeg4DecContext *ctx)
 {
     MpegEncContext *s = &ctx->m;
 
+    //printf ("__PRETTY_FUNCTION__ = %s\n", __PRETTY_FUNCTION__);
+
     int mb_num_bits      = av_log2(s->mb_num - 1) + 1;
     int header_extension = 0, mb_num, len;
 
@@ -556,11 +558,13 @@ int ff_mpeg4_decode_studio_slice_header(Mpeg4DecContext *ctx)
     int i;
     GetBitContext *gb = &s->gb;
 
+    printf ("__PRETTY_FUNCTION__ = %s byte_offset %i\n", __PRETTY_FUNCTION__, get_bits_count(&s->gb) / 8);
+
     if (get_bits_long(gb, 32) == SLICE_START_CODE) {
         uint8_t quantiser_scale_code = 0;
 
         uint16_t mb_num = get_bits(gb, 13); // FIXME, this is a VLC
-        printf("\n mb_num %i \n", mb_num);
+        //printf("\n mb_num %i count %i \n", mb_num, get_bits_count(gb));
 
         s->mb_x = mb_num % s->mb_width;
         s->mb_y = mb_num / s->mb_width;
@@ -581,6 +585,10 @@ int ff_mpeg4_decode_studio_slice_header(Mpeg4DecContext *ctx)
         skip_bits1(gb); /* extra_bit_slice */
 
         reset_studio_dc_predictors(s);
+    }
+    else {
+        printf("\n NO START CODE \n");
+        exit(0);
     }
     // FIXME error out
     return 0;
@@ -1782,7 +1790,7 @@ static void next_start_code_studio(GetBitContext *gb)
 
     while (get_bits_left(gb) >= 24 && show_bits_long(gb, 24) != 0x1) {
         get_bits(gb, 8);
-        printf("reading byte \n");
+        //printf("reading byte \n");
     }
 }
 
@@ -1813,9 +1821,11 @@ static int ac_state_tab[22][2] =
     {0, 11}
 };
 
-static int mpeg4_decode_studio_block(MpegEncContext *s, int32_t *block, int n)
+static int mpeg4_decode_studio_block(MpegEncContext *s, int32_t block[64], int n)
 {
     Mpeg4DecContext *ctx = (Mpeg4DecContext *)s;
+
+    //printf ("__PRETTY_FUNCTION__ = %s block %i\n", __PRETTY_FUNCTION__, n);
 
     int cc, dct_dc_size, dct_diff, code, i, j;
     VLC *cur_vlc = &ctx->studio_intra_tab[0];
@@ -1849,12 +1859,17 @@ static int mpeg4_decode_studio_block(MpegEncContext *s, int32_t *block, int n)
 
         if (dct_dc_size > 8) {
             if (get_bits1(&s->gb) == 0) { /* marker */
-                printf("\n no marker \n");
+                //printf("\n no marker \n");
+                exit(0);
             }
         }
     }
 
+    //printf("\n %i %i mult %i \n", s->intra_dc_precision, s->dct_precision, (8 >> s->intra_dc_precision) * (8 >> s->dct_precision));
+
     s->studio_dc_val[cc] += dct_diff;
+
+    //printf("\n dc raw %i \n", s->studio_dc_val[cc]);
 
     if (s->mpeg_quant)
         block[0] = s->studio_dc_val[cc] * (8 >> s->intra_dc_precision);
@@ -1877,7 +1892,7 @@ static int mpeg4_decode_studio_block(MpegEncContext *s, int32_t *block, int n)
 
         if (group == 0) {
             /* End of Block */
-            printf("\n END OF BLOCK coeffs %i\n", idx);
+            //printf("\n END OF BLOCK coeffs %i\n", idx);
             break;
         }
         else if (group >= 1 && group <= 6) {
@@ -1886,7 +1901,6 @@ static int mpeg4_decode_studio_block(MpegEncContext *s, int32_t *block, int n)
             if (additional_code_len)
                 run += get_bits(&s->gb, additional_code_len);
             idx += run;
-
         }
         else if (group >= 7 && group <= 12) {
             /* Zero run length and +/-1 level (Table B.48) */
@@ -1915,7 +1929,7 @@ static int mpeg4_decode_studio_block(MpegEncContext *s, int32_t *block, int n)
             additional_code_len = s->avctx->bits_per_raw_sample + s->dct_precision + 4;
             flc = get_bits(&s->gb, additional_code_len);
             if (flc >> (additional_code_len-1))
-                block[j] = -1 * (( flc^((1 << additional_code_len) -1 )) + 1);
+                block[j] = -1 * (( flc ^ ((1 << additional_code_len) -1)) + 1);
             else
                 block[j] = flc;
 
@@ -1925,15 +1939,32 @@ static int mpeg4_decode_studio_block(MpegEncContext *s, int32_t *block, int n)
         }
     }
 
+    //printf("\n coeffs %i \n", idx);
+    if( idx > 64 ) {
+        printf("\n fail \n");
+        exit(0);
+    }
+
     block[63] ^= mismatch & 1;
+    if( n == 4 && s->mb_x == 0 && s->mb_y == 0) {
+        printf("\n coeffs \n");
+        for( int a = 0; a < 8; a++ ) {
+            for( int b = 0; b < 8; b++ ) {
+                printf("%10i ", block[8*a+b]);
+            }
+            printf("\n");
+        }
+        printf("\n \n");
+    }
 
     return 0;
 }
 
-static int mpeg4_decode_studio_mb(MpegEncContext *s, int16_t block[12][64])
+static int mpeg4_decode_studio_mb(MpegEncContext *s, int16_t block_[12][64])
 {
     int i;
-    printf ("__PRETTY_FUNCTION__ = %s\n", __PRETTY_FUNCTION__);
+    //printf ("__PRETTY_FUNCTION__ = %s\n", __PRETTY_FUNCTION__);
+    printf("\n mb count %i \n", get_bits_count(&s->gb));
 
     /* StudioMacroblock */
     /* Assumes I-VOP */
@@ -1944,18 +1975,25 @@ static int mpeg4_decode_studio_mb(MpegEncContext *s, int16_t block[12][64])
         if (!get_bits1(&s->gb)) {
             skip_bits1(&s->gb);
             s->qscale = get_qscale(s);
+            //printf("\n new qscale \n");
         }
 
         for (i = 0; i < mpeg4_block_count[s->chroma_format]; i++) {
-            mpeg4_decode_studio_block(s, (int32_t*)block[i], i);
+            mpeg4_decode_studio_block(s, s->block2[i], i);
         }
+        //printf("\n done %i blocks pos %i \n", mpeg4_block_count[s->chroma_format], get_bits_count(&s->gb));
     } else {
         /* DPCM */
         printf("\n dpcm \n");
+        check_marker(s->avctx, &s->gb, "DPCM block start");
+
+
+        exit(0);
     }
 
     if (show_bits(&s->gb, 23) == 0) {
         next_start_code_studio(&s->gb);
+        printf("\n end of slice \n");
         return SLICE_END;
     }
 
@@ -2862,7 +2900,7 @@ static void read_quant_matrix_ext(MpegEncContext *s, GetBitContext *gb)
     }
 
     if (get_bits1(gb)) {
-        printf("\n non intra quant \n");
+        //printf("\n non intra quant \n");
         /* non_intra_quantiser_matrix */
         for (i = 0; i < 64; i++) {
             get_bits(gb, 8);
@@ -2870,7 +2908,7 @@ static void read_quant_matrix_ext(MpegEncContext *s, GetBitContext *gb)
     }
 
     if (get_bits1(gb)) {
-        printf("\n chroma intra quant \n");
+        //printf("\n chroma intra quant \n");
         /* chroma_intra_quantiser_matrix */
         for (i = 0; i < 64; i++) {
             v = get_bits(gb, 8);
@@ -2878,9 +2916,18 @@ static void read_quant_matrix_ext(MpegEncContext *s, GetBitContext *gb)
             s->chroma_intra_matrix[j] = v;
         }
     }
+    printf("\n chroma matrix \n");
+    for( int a = 0; a < 8; a++ ) {
+        for( int b = 0; b < 8; b++ ) {
+            printf("%10i ", s->chroma_intra_matrix[8*a+b]);
+        }
+        printf("\n");
+    }
+    printf("\n \n");
+
 
     if (get_bits1(gb)) {
-        printf("\n chroma non intra quant \n");
+        //printf("\n chroma non intra quant \n");
         /* chroma_non_intra_quantiser_matrix */
         for (i = 0; i < 64; i++) {
             get_bits(gb, 8);
@@ -2893,17 +2940,20 @@ static void read_quant_matrix_ext(MpegEncContext *s, GetBitContext *gb)
 static void extension_and_user_data(MpegEncContext *s, GetBitContext *gb, int id)
 {
     uint32_t startcode;
-    int i;
 
     startcode = show_bits_long(gb, 32);
     if (startcode == USER_DATA_STARTCODE || startcode == EXT_STARTCODE) {
-        printf("\n extension or user data stuff id %i \n", id);
+        //printf("\n extension or user data stuff id %i \n", id);
 
         if ((id == 2 || id == 4) && startcode == EXT_STARTCODE) {
             skip_bits_long(gb, 32);
             uint8_t type = get_bits(gb, 4);
             if (type == QUANT_MATRIX_EXT_ID) {
                 read_quant_matrix_ext(s, gb);
+            }
+            else {
+                //printf("\n unknown type %i \n", type );
+                exit(0);
             }
         }
     }
@@ -2933,6 +2983,9 @@ static int decode_smpte_tc(Mpeg4DecContext *ctx, GetBitContext *gb)
 static int decode_studio_vop_header(Mpeg4DecContext *ctx, GetBitContext *gb)
 {
     MpegEncContext *s = &ctx->m;
+    int i, v;
+
+    //printf ("__PRETTY_FUNCTION__ = %s\n", __PRETTY_FUNCTION__);
 
     if (get_bits_left(gb) <= 32)
         return 0;
@@ -3043,8 +3096,8 @@ static void decode_studiovisualobject(Mpeg4DecContext *ctx, GetBitContext *gb)
                     if (s->width && s->height &&
                         (s->width != width || s->height != height))
                         s->context_reinit = 1;
-                    s->width  = width;
-                    s->height = height;
+                    s->width  = 1920;
+                    s->height = 1088;
                 }
             }
             s->aspect_ratio_info = get_bits(gb, 4);
@@ -3370,7 +3423,7 @@ static av_cold int decode_init(AVCodecContext *avctx)
     s->h263_pred = 1;
     s->low_delay = 0; /* default, might be overridden in the vol header during header parsing */
     s->decode_mb = mpeg4_decode_mb;
-    s->avctx->bits_per_raw_sample = 8;
+    s->avctx->bits_per_raw_sample = 10;
     ctx->time_increment_bits = 4; /* default value for broken headers */
 
     avctx->chroma_sample_location = AVCHROMA_LOC_LEFT;

@@ -54,10 +54,152 @@
 #define C1 C_FIX(0.6532814824)
 #define C2 C_FIX(0.2705980501)
 
+// STEINAR IDCT
+#define DCTSIZE 8
+#define DCTSIZE2 64
 /* row idct is multiple by 16 * sqrt(2.0), col idct4 is normalized,
    and the butterfly must be multiplied by 0.5 * sqrt(2.0) */
 #define C_SHIFT (4+1+12)
 
+<<<<<<< HEAD
+static inline void idct4col_put(uint8_t *dest, ptrdiff_t line_size, const int16_t *col)
+=======
+// 1D 8-point DCT.
+static inline void idct1d_float(double y0, double y1, double y2, double y3, double y4, double y5, double y6, double y7, double *x)
+{
+    // constants
+    static const double a1 = 0.7071067811865474;   // sqrt(2)
+    static const double a2 = 0.5411961001461971;   // cos(3/8 pi) * sqrt(2)
+    // static const double a3 = a1;
+    static const double a3 = 0.7071067811865474;
+    static const double a4 = 1.3065629648763766;   // cos(pi/8) * sqrt(2)
+    // static const double a5 = 0.5 * (a4 - a2);
+    static const double a5 = 0.3826834323650897;
+
+    // phase 1
+    const double p1_0 = y0;
+    const double p1_1 = y4;
+    const double p1_2 = y2;
+    const double p1_3 = y6;
+    const double p1_4 = y5;
+    const double p1_5 = y1;
+    const double p1_6 = y7;
+    const double p1_7 = y3;
+
+    // phase 2
+    const double p2_0 = p1_0;
+    const double p2_1 = p1_1;
+    const double p2_2 = p1_2;
+    const double p2_3 = p1_3;
+    const double p2_4 = p1_4 - p1_7;
+    const double p2_5 = p1_5 + p1_6;
+    const double p2_6 = p1_5 - p1_6;
+    const double p2_7 = p1_4 + p1_7;
+
+    // phase 3
+    const double p3_0 = p2_0;
+    const double p3_1 = p2_1;
+    const double p3_2 = p2_2 - p2_3;
+    const double p3_3 = p2_2 + p2_3;
+    const double p3_4 = p2_4;
+    const double p3_5 = p2_5 - p2_7;
+    const double p3_6 = p2_6;
+    const double p3_7 = p2_5 + p2_7;
+
+    // phase 4
+    const double p4_0 = p3_0;
+    const double p4_1 = p3_1;
+    const double p4_2 = a1 * p3_2;
+    const double p4_3 = p3_3;
+    const double p4_4 = p3_4 * -a2 + (p3_4 + p3_6) * -a5;
+    const double p4_5 = a3 * p3_5;
+    const double p4_6 = p3_6 * a4 + (p3_4 + p3_6) * -a5;
+    const double p4_7 = p3_7;
+
+    // phase 5
+    const double p5_0 = p4_0 + p4_1;
+    const double p5_1 = p4_0 - p4_1;
+    const double p5_2 = p4_2;
+    const double p5_3 = p4_2 + p4_3;
+    const double p5_4 = p4_4;
+    const double p5_5 = p4_5;
+    const double p5_6 = p4_6;
+    const double p5_7 = p4_7;
+
+    // phase 6
+    const double p6_0 = p5_0 + p5_3;
+    const double p6_1 = p5_1 + p5_2;
+    const double p6_2 = p5_1 - p5_2;
+    const double p6_3 = p5_0 - p5_3;
+    const double p6_4 = -p5_4;
+    const double p6_5 = p5_5 - p5_4;
+    const double p6_6 = p5_5 + p5_6;
+    const double p6_7 = p5_6 + p5_7;
+
+    // phase 7
+    x[0] = p6_0 + p6_7;
+    x[1] = p6_1 + p6_6;
+    x[2] = p6_2 + p6_5;
+    x[3] = p6_3 + p6_4;
+    x[4] = p6_3 - p6_4;
+    x[5] = p6_2 - p6_5;
+    x[6] = p6_1 - p6_6;
+    x[7] = p6_0 - p6_7;
+}
+
+void ff_idct_float(uint8_t *dest_, int line_size, int16_t *input_)
+{
+    double temp[DCTSIZE2];
+    uint16_t *dest = (uint16_t *)dest_;
+    int32_t *input = (int32_t *)input_;
+
+    // IDCT columns.
+    for (unsigned x = 0; x < DCTSIZE; ++x) {
+        idct1d_float(input[DCTSIZE * 0 + x],
+                     input[DCTSIZE * 1 + x],
+                     input[DCTSIZE * 2 + x],
+                     input[DCTSIZE * 3 + x],
+                     input[DCTSIZE * 4 + x],
+                     input[DCTSIZE * 5 + x],
+                     input[DCTSIZE * 6 + x],
+                     input[DCTSIZE * 7 + x],
+                     temp + x * DCTSIZE);
+    }
+
+    //printf("\n post idct \n");
+    // IDCT rows.
+    for (unsigned y = 0; y < DCTSIZE; ++y) {
+        double temp2[DCTSIZE];
+        idct1d_float(temp[DCTSIZE * 0 + y],
+                     temp[DCTSIZE * 1 + y],
+                     temp[DCTSIZE * 2 + y],
+                     temp[DCTSIZE * 3 + y],
+                     temp[DCTSIZE * 4 + y],
+                     temp[DCTSIZE * 5 + y],
+                     temp[DCTSIZE * 6 + y],
+                     temp[DCTSIZE * 7 + y],
+                     temp2);
+
+        for (unsigned x = 0; x < DCTSIZE; ++x) {
+            const double val = temp2[x] / 64;
+            if( val > 1023)
+                dest[x] = 1023;
+            else if( val < 0)
+                dest[x] = 0;
+            else
+                dest[x] = val;
+            //printf("%10f ", val);
+
+        }
+        dest += line_size / 2;
+        //printf("\n");
+    }
+    //printf("\n \n");
+}
+// END OF STEINAR CODE
+
+static inline void idct4col_put(uint8_t *dest, int line_size, const int16_t *col)
+>>>>>>> Add dev hacks
 static inline void idct4col_put(uint8_t *dest, ptrdiff_t line_size, const int16_t *col)
 {
     int c0, c1, c2, c3, a0, a1, a2, a3;
