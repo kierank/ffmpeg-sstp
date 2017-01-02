@@ -256,7 +256,7 @@ static int decode_slice(MpegEncContext *s)
             ff_dlog(s, "%d %06X\n",
                     get_bits_count(&s->gb), show_bits(&s->gb, 24));
 
-            ff_tlog(NULL, "Decoding MB at %dx%d\n", s->mb_x, s->mb_y);
+            //printf("Decoding MB at %dx%d\n", s->mb_x, s->mb_y);
             ret = s->decode_mb(s, s->block);
 
             if (s->pict_type != AV_PICTURE_TYPE_B)

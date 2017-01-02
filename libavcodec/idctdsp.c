@@ -256,7 +256,8 @@ av_cold void ff_idctdsp_init(IDCTDSPContext *c, AVCodecContext *avctx)
         c->perm_type = FF_IDCT_PERM_NONE;
     } else {
         if (avctx->bits_per_raw_sample == 10 || avctx->bits_per_raw_sample == 9) {
-            c->idct_put              = ff_simple_idct_put_10;
+            //c->idct_put              = ff_simple_idct_put_10;
+            c->idct_put              = ff_idct_float;
             c->idct_add              = ff_simple_idct_add_10;
             c->idct                  = ff_simple_idct_10;
             c->perm_type             = FF_IDCT_PERM_NONE;
@@ -303,8 +304,8 @@ av_cold void ff_idctdsp_init(IDCTDSPContext *c, AVCodecContext *avctx)
         ff_idctdsp_init_arm(c, avctx, high_bit_depth);
     if (ARCH_PPC)
         ff_idctdsp_init_ppc(c, avctx, high_bit_depth);
-    if (ARCH_X86)
-        ff_idctdsp_init_x86(c, avctx, high_bit_depth);
+    //if (ARCH_X86)
+    //    ff_idctdsp_init_x86(c, avctx, high_bit_depth);
     if (ARCH_MIPS)
         ff_idctdsp_init_mips(c, avctx, high_bit_depth);
 
