@@ -1921,6 +1921,7 @@ static int mpeg4_decode_studio_block(MpegEncContext *s, int32_t *block, int n)
 
             block[j] = ((8 * 2 * block[j] * quant_matrix[j] * s->qscale) >> s->dct_precision) / 32;
             block[j] = av_clip(block[j], min, max);
+            mismatch ^= block[j];
         }
     }
 
