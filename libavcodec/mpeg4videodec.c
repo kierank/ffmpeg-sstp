@@ -558,7 +558,7 @@ int ff_mpeg4_decode_studio_slice_header(Mpeg4DecContext *ctx)
     int i;
     GetBitContext *gb = &s->gb;
 
-    printf ("__PRETTY_FUNCTION__ = %s byte_offset %i\n", __PRETTY_FUNCTION__, get_bits_count(&s->gb) / 8);
+    //printf ("__PRETTY_FUNCTION__ = %s byte_offset %i\n", __PRETTY_FUNCTION__, get_bits_count(&s->gb) / 8);
 
     if (get_bits_long(gb, 32) == SLICE_START_CODE) {
         uint8_t quantiser_scale_code = 0;
@@ -1946,6 +1946,7 @@ static int mpeg4_decode_studio_block(MpegEncContext *s, int32_t block[64], int n
     }
 
     block[63] ^= mismatch & 1;
+#if 0
     if( n == 4 && s->mb_x == 0 && s->mb_y == 0) {
         printf("\n coeffs \n");
         for( int a = 0; a < 8; a++ ) {
@@ -1956,6 +1957,7 @@ static int mpeg4_decode_studio_block(MpegEncContext *s, int32_t block[64], int n
         }
         printf("\n \n");
     }
+#endif
 
     return 0;
 }
@@ -1964,7 +1966,7 @@ static int mpeg4_decode_studio_mb(MpegEncContext *s, int16_t block_[12][64])
 {
     int i;
     //printf ("__PRETTY_FUNCTION__ = %s\n", __PRETTY_FUNCTION__);
-    printf("\n mb count %i \n", get_bits_count(&s->gb));
+    //printf("\n mb count %i \n", get_bits_count(&s->gb));
 
     /* StudioMacroblock */
     /* Assumes I-VOP */
@@ -1993,7 +1995,7 @@ static int mpeg4_decode_studio_mb(MpegEncContext *s, int16_t block_[12][64])
 
     if (show_bits(&s->gb, 23) == 0) {
         next_start_code_studio(&s->gb);
-        printf("\n end of slice \n");
+        //printf("\n end of slice \n");
         return SLICE_END;
     }
 
@@ -2889,7 +2891,7 @@ static void read_quant_matrix_ext(MpegEncContext *s, GetBitContext *gb)
     int i, j, v;
 
     if (get_bits1(gb)) {
-        printf("\n intra quant \n");
+        //printf("\n intra quant \n");
         /* intra_quantiser_matrix */
         for (i = 0; i < 64; i++) {
             v = get_bits(gb, 8);
@@ -2916,15 +2918,6 @@ static void read_quant_matrix_ext(MpegEncContext *s, GetBitContext *gb)
             s->chroma_intra_matrix[j] = v;
         }
     }
-    printf("\n chroma matrix \n");
-    for( int a = 0; a < 8; a++ ) {
-        for( int b = 0; b < 8; b++ ) {
-            printf("%10i ", s->chroma_intra_matrix[8*a+b]);
-        }
-        printf("\n");
-    }
-    printf("\n \n");
-
 
     if (get_bits1(gb)) {
         //printf("\n chroma non intra quant \n");
