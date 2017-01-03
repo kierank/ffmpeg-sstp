@@ -54,16 +54,20 @@
 #define C1 C_FIX(0.6532814824)
 #define C2 C_FIX(0.2705980501)
 
-// STEINAR IDCT
-#define DCTSIZE 8
-#define DCTSIZE2 64
 /* row idct is multiple by 16 * sqrt(2.0), col idct4 is normalized,
    and the butterfly must be multiplied by 0.5 * sqrt(2.0) */
 #define C_SHIFT (4+1+12)
 
-<<<<<<< HEAD
-static inline void idct4col_put(uint8_t *dest, ptrdiff_t line_size, const int16_t *col)
-=======
+// STEINAR IDCT
+#define DCTSIZE 8
+#define DCTSIZE2 64
+
+// Scale factors; 1.0 / (sqrt(2.0) * cos(k * M_PI / 16.0)), except for the first which is 1.
+static const double scalefac[] = {
+    1.0, 0.7209598220069479, 0.765366864730180, 0.8504300947672564,
+    1.0, 1.2727585805728336, 1.847759065022573, 3.6245097854115502
+};
+
 // 1D 8-point DCT.
 static inline void idct1d_float(double y0, double y1, double y2, double y3, double y4, double y5, double y6, double y7, double *x)
 {
@@ -150,19 +154,26 @@ static inline void idct1d_float(double y0, double y1, double y2, double y3, doub
 void ff_idct_float(uint8_t *dest_, int line_size, int16_t *input_)
 {
     double temp[DCTSIZE2];
+    double quant_table[DCTSIZE2];
     uint16_t *dest = (uint16_t *)dest_;
     int32_t *input = (int32_t *)input_;
 
+    for (unsigned y = 0; y < DCTSIZE; ++y) {
+        for (unsigned x = 0; x < DCTSIZE; ++x) {
+            quant_table[y * DCTSIZE + x] = (1.0/DCTSIZE) * scalefac[x] * scalefac[y];
+        }
+    }
+
     // IDCT columns.
     for (unsigned x = 0; x < DCTSIZE; ++x) {
-        idct1d_float(input[DCTSIZE * 0 + x],
-                     input[DCTSIZE * 1 + x],
-                     input[DCTSIZE * 2 + x],
-                     input[DCTSIZE * 3 + x],
-                     input[DCTSIZE * 4 + x],
-                     input[DCTSIZE * 5 + x],
-                     input[DCTSIZE * 6 + x],
-                     input[DCTSIZE * 7 + x],
+        idct1d_float(input[DCTSIZE * 0 + x] * quant_table[DCTSIZE * 0 + x],
+                     input[DCTSIZE * 1 + x] * quant_table[DCTSIZE * 1 + x],
+                     input[DCTSIZE * 2 + x] * quant_table[DCTSIZE * 2 + x],
+                     input[DCTSIZE * 3 + x] * quant_table[DCTSIZE * 3 + x],
+                     input[DCTSIZE * 4 + x] * quant_table[DCTSIZE * 4 + x],
+                     input[DCTSIZE * 5 + x] * quant_table[DCTSIZE * 5 + x],
+                     input[DCTSIZE * 6 + x] * quant_table[DCTSIZE * 6 + x],
+                     input[DCTSIZE * 7 + x] * quant_table[DCTSIZE * 7 + x],
                      temp + x * DCTSIZE);
     }
 
@@ -181,7 +192,7 @@ void ff_idct_float(uint8_t *dest_, int line_size, int16_t *input_)
                      temp2);
 
         for (unsigned x = 0; x < DCTSIZE; ++x) {
-            const double val = temp2[x] / 64;
+            const double val = temp2[x] / 8;
             if( val > 1023)
                 dest[x] = 1023;
             else if( val < 0)
@@ -198,7 +209,6 @@ void ff_idct_float(uint8_t *dest_, int line_size, int16_t *input_)
 }
 // END OF STEINAR CODE
 
-static inline void idct4col_put(uint8_t *dest, int line_size, const int16_t *col)
 >>>>>>> Add dev hacks
 static inline void idct4col_put(uint8_t *dest, ptrdiff_t line_size, const int16_t *col)
 {
