@@ -119,6 +119,8 @@ typedef struct Mpeg4DecContext {
     VLC studio_intra_tab[12];
     VLC studio_luma_dc;
     VLC studio_chroma_dc;
+
+    int rgb;
 } Mpeg4DecContext;
 
 static const uint8_t mpeg4_block_count[4] = {0, 6, 8, 12};
