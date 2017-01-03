@@ -1848,7 +1848,10 @@ static int mpeg4_decode_studio_block(MpegEncContext *s, int32_t block[64], int n
     }
     else {
         cc = ((n - 4) % 2) + 1; /* Table 7-30 */
-        dct_dc_size = get_vlc2(&s->gb, ctx->studio_chroma_dc.table, STUDIO_INTRA_BITS, 2);
+        if (ctx->rgb)
+            dct_dc_size = get_vlc2(&s->gb, ctx->studio_luma_dc.table, STUDIO_INTRA_BITS, 2);
+        else
+            dct_dc_size = get_vlc2(&s->gb, ctx->studio_chroma_dc.table, STUDIO_INTRA_BITS, 2);
         quant_matrix = s->chroma_intra_matrix;
     }
 
@@ -3070,11 +3073,16 @@ static void decode_studiovisualobject(Mpeg4DecContext *ctx, GetBitContext *gb)
             skip_bits(gb, 4); /* video_object_layer_shape_extension */
             skip_bits1(gb); /* progressive_sequence */
             if (ctx->shape != BIN_ONLY_SHAPE) {
-                skip_bits1(gb); /* rgb_components */
+                ctx->rgb = get_bits1(gb); /* rgb_components */
                 s->chroma_format = get_bits(gb, 2); /* chroma_format */
                 s->avctx->bits_per_raw_sample = get_bits(gb, 4); /* bit_depth */
                 if (s->avctx->bits_per_raw_sample == 10) {
-                    s->avctx->pix_fmt = s->chroma_format == CHROMA_422 ? AV_PIX_FMT_YUV422P10 : AV_PIX_FMT_YUV444P10;
+                    if (ctx->rgb) {
+                        s->avctx->pix_fmt = AV_PIX_FMT_GBRP10;
+                    }
+                    else {
+                        s->avctx->pix_fmt = s->chroma_format == CHROMA_422 ? AV_PIX_FMT_YUV422P10 : AV_PIX_FMT_YUV444P10;
+                    }
                 }
             }
             if (ctx->shape == RECT_SHAPE) {
@@ -3114,9 +3122,6 @@ static void decode_studiovisualobject(Mpeg4DecContext *ctx, GetBitContext *gb)
             check_marker(s->avctx, gb, "after latter_half_vbv_occupancy");
             s->low_delay = get_bits1(gb);
             s->mpeg_quant = get_bits1(gb); /* mpeg2_stream */
-
-            /* XXX: Quant Matrix Extension is allowed here, long before
-             *      the alternate_scan flag. What do we do? */
 
             next_start_code_studio(gb);
             extension_and_user_data(s, gb, 2);
@@ -3439,6 +3444,7 @@ static const AVClass mpeg4_class = {
 };
 
 const enum AVPixelFormat mpeg4_pix_fmts[] = {
+    AV_PIX_FMT_GBRP10,
     AV_PIX_FMT_YUV422P10,
     AV_PIX_FMT_NONE
 };
