@@ -3097,8 +3097,8 @@ static void decode_studiovisualobject(Mpeg4DecContext *ctx, GetBitContext *gb)
                     if (s->width && s->height &&
                         (s->width != width || s->height != height))
                         s->context_reinit = 1;
-                    s->width  = 1920;
-                    s->height = 1088;
+                    s->width  = width;
+                    s->height = height;
                 }
             }
             s->aspect_ratio_info = get_bits(gb, 4);
