@@ -209,7 +209,6 @@ void ff_idct_float(uint8_t *dest_, int line_size, int16_t *input_)
 }
 // END OF STEINAR CODE
 
->>>>>>> Add dev hacks
 static inline void idct4col_put(uint8_t *dest, ptrdiff_t line_size, const int16_t *col)
 {
     int c0, c1, c2, c3, a0, a1, a2, a3;
