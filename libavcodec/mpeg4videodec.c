@@ -3443,12 +3443,6 @@ static const AVClass mpeg4_class = {
     .version    = LIBAVUTIL_VERSION_INT,
 };
 
-const enum AVPixelFormat mpeg4_pix_fmts[] = {
-    AV_PIX_FMT_GBRP10,
-    AV_PIX_FMT_YUV422P10,
-    AV_PIX_FMT_NONE
-};
-
 AVCodec ff_mpeg4_decoder = {
     .name                  = "mpeg4",
     .long_name             = NULL_IF_CONFIG_SMALL("MPEG-4 part 2"),
@@ -3464,7 +3458,7 @@ AVCodec ff_mpeg4_decoder = {
     .caps_internal         = FF_CODEC_CAP_SKIP_FRAME_FILL_PARAM,
     .flush                 = ff_mpeg_flush,
     .max_lowres            = 3,
-    .pix_fmts              = mpeg4_pix_fmts,
+    .pix_fmts              = ff_h263_hwaccel_pixfmt_list_420,
     .profiles              = NULL_IF_CONFIG_SMALL(ff_mpeg4_video_profiles),
     .update_thread_context = ONLY_IF_THREADS_ENABLED(mpeg4_update_thread_context),
     .priv_class = &mpeg4_class,
