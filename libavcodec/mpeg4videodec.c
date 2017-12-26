@@ -2995,7 +2995,7 @@ static int decode_studio_vop_header(Mpeg4DecContext *ctx, GetBitContext *gb)
     if (get_bits1(gb)) { /* vop_coded */
         skip_bits1(gb); /* top_field_first */
         skip_bits1(gb); /* repeat_first_field */
-        skip_bits1(gb); /* progressive_frame FIXME */
+        s->progressive_frame = get_bits1(gb) ^ 1; /* progressive_frame */
     }
 
     if (s->pict_type == AV_PICTURE_TYPE_I) {
