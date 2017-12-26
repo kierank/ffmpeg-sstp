@@ -581,11 +581,7 @@ int ff_mpeg4_decode_studio_slice_header(Mpeg4DecContext *ctx)
 
         reset_studio_dc_predictors(s);
     }
-    else {
-        printf("\n NO START CODE \n");
-        exit(0);
-    }
-    // FIXME error out
+
     return 0;
 }
 
