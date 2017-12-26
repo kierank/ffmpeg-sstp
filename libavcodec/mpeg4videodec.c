@@ -1943,9 +1943,8 @@ static int mpeg4_decode_studio_mb(MpegEncContext *s, int16_t block_[12][64])
     } else {
         /* DPCM */
         check_marker(s->avctx, &s->gb, "DPCM block start");
-
-
-        exit(0);
+        avpriv_request_sample(s->avctx, "DPCM encoded block");
+        next_start_code_studio(&s->gb);
     }
 
     if (show_bits(&s->gb, 23) == 0) {
