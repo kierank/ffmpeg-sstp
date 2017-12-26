@@ -444,8 +444,6 @@ int ff_mpeg4_decode_video_packet_header(Mpeg4DecContext *ctx)
 {
     MpegEncContext *s = &ctx->m;
 
-    //printf ("__PRETTY_FUNCTION__ = %s\n", __PRETTY_FUNCTION__);
-
     int mb_num_bits      = av_log2(s->mb_num - 1) + 1;
     int header_extension = 0, mb_num, len;
 
@@ -558,8 +556,6 @@ int ff_mpeg4_decode_studio_slice_header(Mpeg4DecContext *ctx)
     GetBitContext *gb = &s->gb;
     unsigned vlc_len;
     uint16_t mb_num;
-
-    //printf ("__PRETTY_FUNCTION__ = %s byte_offset %i\n", __PRETTY_FUNCTION__, get_bits_count(&s->gb) / 8);
 
     if (get_bits_long(gb, 32) == SLICE_START_CODE) {
         vlc_len = av_log2(((s->width + 15) / 16) * ((s->height + 15) / 16)) + 1;
@@ -1789,7 +1785,6 @@ static void next_start_code_studio(GetBitContext *gb)
 
     while (get_bits_left(gb) >= 24 && show_bits_long(gb, 24) != 0x1) {
         get_bits(gb, 8);
-        //printf("reading byte \n");
     }
 }
 
@@ -1823,8 +1818,6 @@ static int ac_state_tab[22][2] =
 static int mpeg4_decode_studio_block(MpegEncContext *s, int32_t block[64], int n)
 {
     Mpeg4DecContext *ctx = (Mpeg4DecContext *)s;
-
-    //printf ("__PRETTY_FUNCTION__ = %s block %i\n", __PRETTY_FUNCTION__, n);
 
     int cc, dct_dc_size, dct_diff, code, i, j;
     VLC *cur_vlc = &ctx->studio_intra_tab[0];
@@ -1863,11 +1856,7 @@ static int mpeg4_decode_studio_block(MpegEncContext *s, int32_t block[64], int n
             check_marker(s->avctx, &s->gb, "dct_dc_size > 8");
     }
 
-    //printf("\n %i %i mult %i \n", s->intra_dc_precision, s->dct_precision, (8 >> s->intra_dc_precision) * (8 >> s->dct_precision));
-
     s->studio_dc_val[cc] += dct_diff;
-
-    //printf("\n dc raw %i \n", s->studio_dc_val[cc]);
 
     if (s->mpeg_quant)
         block[0] = s->studio_dc_val[cc] * (8 >> s->intra_dc_precision);
@@ -1890,7 +1879,6 @@ static int mpeg4_decode_studio_block(MpegEncContext *s, int32_t block[64], int n
 
         if (group == 0) {
             /* End of Block */
-            //printf("\n END OF BLOCK coeffs %i\n", idx);
             break;
         }
         else if (group >= 1 && group <= 6) {
@@ -1937,25 +1925,7 @@ static int mpeg4_decode_studio_block(MpegEncContext *s, int32_t block[64], int n
         }
     }
 
-    //printf("\n coeffs %i \n", idx);
-    if( idx > 64 ) {
-        printf("\n fail \n");
-        exit(0);
-    }
-
     block[63] ^= mismatch & 1;
-#if 0
-    if( n == 4 && s->mb_x == 0 && s->mb_y == 0) {
-        printf("\n coeffs \n");
-        for( int a = 0; a < 8; a++ ) {
-            for( int b = 0; b < 8; b++ ) {
-                printf("%10i ", block[8*a+b]);
-            }
-            printf("\n");
-        }
-        printf("\n \n");
-    }
-#endif
 
     return 0;
 }
@@ -1963,8 +1933,6 @@ static int mpeg4_decode_studio_block(MpegEncContext *s, int32_t block[64], int n
 static int mpeg4_decode_studio_mb(MpegEncContext *s, int16_t block_[12][64])
 {
     int i;
-    //printf ("__PRETTY_FUNCTION__ = %s\n", __PRETTY_FUNCTION__);
-    //printf("\n mb count %i \n", get_bits_count(&s->gb));
 
     /* StudioMacroblock */
     /* Assumes I-VOP */
@@ -1975,16 +1943,13 @@ static int mpeg4_decode_studio_mb(MpegEncContext *s, int16_t block_[12][64])
         if (!get_bits1(&s->gb)) {
             skip_bits1(&s->gb);
             s->qscale = get_qscale(s);
-            //printf("\n new qscale \n");
         }
 
         for (i = 0; i < mpeg4_block_count[s->chroma_format]; i++) {
             mpeg4_decode_studio_block(s, s->block2[i], i);
         }
-        //printf("\n done %i blocks pos %i \n", mpeg4_block_count[s->chroma_format], get_bits_count(&s->gb));
     } else {
         /* DPCM */
-        printf("\n dpcm \n");
         check_marker(s->avctx, &s->gb, "DPCM block start");
 
 
@@ -1993,7 +1958,6 @@ static int mpeg4_decode_studio_mb(MpegEncContext *s, int16_t block_[12][64])
 
     if (show_bits(&s->gb, 23) == 0) {
         next_start_code_studio(&s->gb);
-        //printf("\n end of slice \n");
         return SLICE_END;
     }
 
@@ -2889,7 +2853,6 @@ static void read_quant_matrix_ext(MpegEncContext *s, GetBitContext *gb)
     int i, j, v;
 
     if (get_bits1(gb)) {
-        //printf("\n intra quant \n");
         /* intra_quantiser_matrix */
         for (i = 0; i < 64; i++) {
             v = get_bits(gb, 8);
@@ -2900,7 +2863,6 @@ static void read_quant_matrix_ext(MpegEncContext *s, GetBitContext *gb)
     }
 
     if (get_bits1(gb)) {
-        //printf("\n non intra quant \n");
         /* non_intra_quantiser_matrix */
         for (i = 0; i < 64; i++) {
             get_bits(gb, 8);
@@ -2908,7 +2870,6 @@ static void read_quant_matrix_ext(MpegEncContext *s, GetBitContext *gb)
     }
 
     if (get_bits1(gb)) {
-        //printf("\n chroma intra quant \n");
         /* chroma_intra_quantiser_matrix */
         for (i = 0; i < 64; i++) {
             v = get_bits(gb, 8);
@@ -2918,7 +2879,6 @@ static void read_quant_matrix_ext(MpegEncContext *s, GetBitContext *gb)
     }
 
     if (get_bits1(gb)) {
-        //printf("\n chroma non intra quant \n");
         /* chroma_non_intra_quantiser_matrix */
         for (i = 0; i < 64; i++) {
             get_bits(gb, 8);
@@ -2934,18 +2894,12 @@ static void extension_and_user_data(MpegEncContext *s, GetBitContext *gb, int id
 
     startcode = show_bits_long(gb, 32);
     if (startcode == USER_DATA_STARTCODE || startcode == EXT_STARTCODE) {
-        //printf("\n extension or user data stuff id %i \n", id);
 
         if ((id == 2 || id == 4) && startcode == EXT_STARTCODE) {
             skip_bits_long(gb, 32);
             uint8_t type = get_bits(gb, 4);
-            if (type == QUANT_MATRIX_EXT_ID) {
+            if (type == QUANT_MATRIX_EXT_ID)
                 read_quant_matrix_ext(s, gb);
-            }
-            else {
-                //printf("\n unknown type %i \n", type );
-                exit(0);
-            }
         }
     }
 }
@@ -2975,8 +2929,6 @@ static int decode_studio_vop_header(Mpeg4DecContext *ctx, GetBitContext *gb)
 {
     MpegEncContext *s = &ctx->m;
     int i, v;
-
-    //printf ("__PRETTY_FUNCTION__ = %s\n", __PRETTY_FUNCTION__);
 
     if (get_bits_left(gb) <= 32)
         return 0;
