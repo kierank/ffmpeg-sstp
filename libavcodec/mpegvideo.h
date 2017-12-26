@@ -730,7 +730,8 @@ void ff_mpv_motion(MpegEncContext *s,
                    qpel_mc_func (*qpix_op)[16]);
 
 static inline void ff_update_block_index(MpegEncContext *s){
-    const int block_size= 8 >> s->avctx->lowres;
+    const int bytes_per_pixel = 1 + (s->avctx->bits_per_raw_sample > 8);
+    const int block_size= (8*bytes_per_pixel) >> s->avctx->lowres;
 
     s->block_index[0]+=2;
     s->block_index[1]+=2;
@@ -739,8 +740,8 @@ static inline void ff_update_block_index(MpegEncContext *s){
     s->block_index[4]++;
     s->block_index[5]++;
     s->dest[0]+= 2*block_size;
-    s->dest[1]+= block_size;
-    s->dest[2]+= block_size;
+    s->dest[1]+= (2 >> s->chroma_x_shift) * block_size;
+    s->dest[2]+= (2 >> s->chroma_x_shift) * block_size;
 }
 
 static inline int get_bits_diff(MpegEncContext *s){
