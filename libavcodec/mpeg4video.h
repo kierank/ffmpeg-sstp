@@ -64,9 +64,6 @@
 #define SLICE_STARTCODE      0x1B7
 #define EXT_STARTCODE        0x1B8
 
-#define VOT_VIDEO_ID 0x1
-
-
 #define QUANT_MATRIX_EXT_ID  0x3
 
 /* smaller packets likely don't contain a real frame */
