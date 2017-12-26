@@ -43,8 +43,6 @@ void ff_simple_idct_put_12(uint8_t *dest, ptrdiff_t line_size, int16_t *block);
 void ff_simple_idct_add_12(uint8_t *dest, ptrdiff_t line_size, int16_t *block);
 void ff_simple_idct_12(int16_t *block);
 
-void ff_idct_float(uint8_t *dest_, int line_size, int16_t *input_);
-
 /**
  * Special version of ff_simple_idct_10() which does dequantization
  * and scales by a factor of 2 more between the two IDCTs to account
