@@ -1815,13 +1815,12 @@ static int mpeg4_decode_studio_block(MpegEncContext *s, int32_t block[64], int n
 {
     Mpeg4DecContext *ctx = (Mpeg4DecContext *)s;
 
-    int cc, dct_dc_size, dct_diff, code, i, j;
+    int cc, dct_dc_size, dct_diff, code, j, idx = 1, group = 0, run = 0,
+        additional_code_len, sign, mismatch;
     VLC *cur_vlc = &ctx->studio_intra_tab[0];
     uint8_t *const scantable = s->intra_scantable.permutated;
     const uint16_t *quant_matrix;
-    int idx = 1;
     uint32_t flc;
-    int mismatch;
     const int min = -1 *  (1 << (s->avctx->bits_per_raw_sample + 6));
     const int max =      ((1 << (s->avctx->bits_per_raw_sample + 6)) - 1);
 
@@ -1864,9 +1863,6 @@ static int mpeg4_decode_studio_block(MpegEncContext *s, int32_t block[64], int n
     mismatch ^= block[0];
 
     /* AC Coefficients */
-    int group = 0, run = 0;
-    int additional_code_len, sign;
-
     while (1) {
         group = get_vlc2(&s->gb, cur_vlc->table, STUDIO_INTRA_BITS, 2);
 
@@ -2887,14 +2883,15 @@ static void read_quant_matrix_ext(MpegEncContext *s, GetBitContext *gb)
 static void extension_and_user_data(MpegEncContext *s, GetBitContext *gb, int id)
 {
     uint32_t startcode;
+    uint8_t extension_type;
 
     startcode = show_bits_long(gb, 32);
     if (startcode == USER_DATA_STARTCODE || startcode == EXT_STARTCODE) {
 
         if ((id == 2 || id == 4) && startcode == EXT_STARTCODE) {
             skip_bits_long(gb, 32);
-            uint8_t type = get_bits(gb, 4);
-            if (type == QUANT_MATRIX_EXT_ID)
+            extension_type = get_bits(gb, 4);
+            if (extension_type == QUANT_MATRIX_EXT_ID)
                 read_quant_matrix_ext(s, gb);
         }
     }
@@ -2993,19 +2990,19 @@ static void decode_studiovisualobject(Mpeg4DecContext *ctx, GetBitContext *gb)
 {
     uint32_t startcode;
     MpegEncContext *s = &ctx->m;
-    int i, width, height;
+    int visual_object_type, width, height;
 
     startcode = get_bits_long(gb, 32);
 
     /* StudioVisualObject() */
     if (startcode == VISUAL_OBJ_STARTCODE) {
         skip_bits(gb, 4); /* visual_object_verid */
-        uint8_t vot = get_bits(gb, 4); /* visual_object_type */
+        visual_object_type = get_bits(gb, 4);
 
         next_start_code_studio(gb);
         extension_and_user_data(s, gb, 1);
 
-        if (vot == VOT_VIDEO_ID) {
+        if (visual_object_type == VOT_VIDEO_ID) {
             /* StudioVideoObjectLayer */
             skip_bits_long(gb, 32); /* video_object_start_code */
             skip_bits_long(gb, 32); /* video_object_layer_start_code */
