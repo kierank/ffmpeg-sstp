@@ -2021,20 +2021,6 @@ void mpv_reconstruct_mb_internal(MpegEncContext *s, int16_t block[12][64],
         dct_linesize = uvlinesize << s->interlaced_dct;
         dct_offset   = s->interlaced_dct ? uvlinesize : uvlinesize*block_size;
 
-#if 0
-        if( s->mb_x == 0 && s->mb_y == 0) {
-            printf("\n chroma coeffs \n");
-            for( int a = 0; a < 8; a++ ) {
-                for( int b = 0; b < 8; b++ ) {
-                    printf("%10i ", s->block2[4][8*a+b]);
-                }
-                printf("\n");
-            }
-            printf("\n \n");
-        }
-        printf("\n linesize %i \n", dct_linesize);
-#endif
-
         s->idsp.idct_put(dest_cb,              dct_linesize, s->block2[4]);
         s->idsp.idct_put(dest_cr,              dct_linesize, s->block2[5]);
         s->idsp.idct_put(dest_cb + dct_offset, dct_linesize, s->block2[6]);
