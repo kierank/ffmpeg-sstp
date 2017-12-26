@@ -1859,12 +1859,8 @@ static int mpeg4_decode_studio_block(MpegEncContext *s, int32_t block[64], int n
     } else {
         dct_diff = get_xbits(&s->gb, dct_dc_size);
 
-        if (dct_dc_size > 8) {
-            if (get_bits1(&s->gb) == 0) { /* marker */
-                //printf("\n no marker \n");
-                exit(0);
-            }
-        }
+        if (dct_dc_size > 8)
+            check_marker(s->avctx, &s->gb, "dct_dc_size > 8");
     }
 
     //printf("\n %i %i mult %i \n", s->intra_dc_precision, s->dct_precision, (8 >> s->intra_dc_precision) * (8 >> s->dct_precision));
