@@ -555,14 +555,15 @@ static void reset_studio_dc_predictors(MpegEncContext *s)
 int ff_mpeg4_decode_studio_slice_header(Mpeg4DecContext *ctx)
 {
     MpegEncContext *s = &ctx->m;
-    int i;
     GetBitContext *gb = &s->gb;
+    unsigned vlc_len;
+    uint16_t mb_num;
 
     //printf ("__PRETTY_FUNCTION__ = %s byte_offset %i\n", __PRETTY_FUNCTION__, get_bits_count(&s->gb) / 8);
 
     if (get_bits_long(gb, 32) == SLICE_START_CODE) {
-        uint16_t mb_num = get_bits(gb, 13); // FIXME, this is a VLC
-        //printf("\n mb_num %i count %i \n", mb_num, get_bits_count(gb));
+        vlc_len = av_log2(((s->width + 15) / 16) * ((s->height + 15) / 16)) + 1;
+        mb_num = get_bits(gb, vlc_len);
 
         s->mb_x = mb_num % s->mb_width;
         s->mb_y = mb_num / s->mb_width;
