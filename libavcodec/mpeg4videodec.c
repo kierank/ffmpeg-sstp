@@ -3360,7 +3360,6 @@ static av_cold int decode_init(AVCodecContext *avctx)
     s->h263_pred = 1;
     s->low_delay = 0; /* default, might be overridden in the vol header during header parsing */
     s->decode_mb = mpeg4_decode_mb;
-    s->avctx->bits_per_raw_sample = 10;
     ctx->time_increment_bits = 4; /* default value for broken headers */
 
     avctx->chroma_sample_location = AVCHROMA_LOC_LEFT;
